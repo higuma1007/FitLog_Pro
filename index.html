@@ -1,0 +1,1158 @@
+<!DOCTYPE html>
+<html lang="ja" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FitLog Pro - ジム記録＆モチベーション管理</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                            accent: '#10b981',
+                            neon: '#39ff14'
+                        },
+                        darkbg: '#0f172a',
+                        cardbg: '#1e293b',
+                        borderbg: '#334155'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Vue 3 CDN -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    
+    <!-- Chart.js for Statistics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <style>
+        /* Custom UI Tweaks for Mobile Usability */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+
+        .no-select {
+            user-select: none;
+            -webkit-user-select: none;
+        }
+    </style>
+</head>
+<body class="bg-darkbg text-slate-100 min-h-screen flex flex-col pb-20 md:pb-0">
+
+    <div id="app" class="flex-1 flex flex-col max-w-4xl mx-auto w-full min-h-screen">
+
+        <!-- Top Header -->
+        <header class="bg-cardbg border-b border-borderbg px-4 py-3 sticky top-0 z-30 shadow-md flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+                <div class="bg-brand-600 text-white p-2 rounded-xl flex items-center justify-center w-9 h-9 shadow-lg shadow-brand-600/30">
+                    <i class="fa-solid fa-dumbbell text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-none bg-gradient-to-r from-emerald-400 to-green-300 bg-clip-text text-transparent">FitLog Pro</h1>
+                    <span class="text-[10px] text-slate-400">爆速ジムログ＆マシン設定メモ</span>
+                </div>
+            </div>
+
+            <!-- Quick Stats Header Badge -->
+            <div class="flex items-center space-x-3 text-xs">
+                <div class="bg-slate-800 px-3 py-1.5 rounded-full border border-slate-700 flex items-center space-x-1.5">
+                    <i class="fa-solid fa-fire text-amber-500"></i>
+                    <span class="font-bold text-amber-400">{{ totalWorkoutDays }}日</span>
+                    <span class="text-slate-400">記録</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Area based on activeTab -->
+        <main class="flex-1 p-3 md:p-5">
+
+            <!-- 1. WORKOUT ENTRY TAB -->
+            <section v-if="activeTab === 'workout'" class="space-y-4">
+                <!-- Date Picker & Fast Navigator Bar -->
+                <div class="bg-cardbg rounded-2xl p-3 border border-borderbg flex items-center justify-between shadow-sm">
+                    <button @click="changeDate(-1)" class="p-2.5 bg-slate-800 hover:bg-slate-700 active:scale-95 rounded-xl transition text-slate-300">
+                        <i class="fa-solid fa-chevron-left"></i>
+                    </button>
+                    
+                    <div class="text-center">
+                        <input type="date" v-model="selectedDate" @change="onDateChange" class="bg-transparent font-bold text-lg text-emerald-400 text-center cursor-pointer outline-none">
+                        <div class="text-xs text-slate-400 font-medium">
+                            {{ formattedSelectedDateLabel }}
+                        </div>
+                    </div>
+
+                    <button @click="changeDate(1)" class="p-2.5 bg-slate-800 hover:bg-slate-700 active:scale-95 rounded-xl transition text-slate-300">
+                        <i class="fa-solid fa-chevron-right"></i>
+                    </button>
+                </div>
+
+                <!-- Add / Select Exercise Section -->
+                <div class="bg-cardbg rounded-2xl p-4 border border-borderbg space-y-4 shadow-md">
+                    <div class="flex justify-between items-center">
+                        <h2 class="font-bold text-slate-200 text-sm flex items-center gap-2">
+                            <i class="fa-solid fa-plus-circle text-emerald-400"></i>
+                            種目を選択・追加
+                        </h2>
+                        <span class="text-xs text-slate-400">自動で前回の重量が反映されます</span>
+                    </div>
+
+                    <!-- Category Selector Pills -->
+                    <div class="flex gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar">
+                        <button 
+                            v-for="cat in categories" 
+                            :key="cat.id"
+                            @click="selectedCategory = cat.id"
+                            :class="[
+                                'px-3 py-1.5 rounded-xl transition whitespace-nowrap font-medium flex items-center gap-1',
+                                selectedCategory === cat.id ? 'bg-emerald-600 text-white shadow-md shadow-emerald-900/40' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                            ]">
+                            <span>{{ cat.icon }}</span>
+                            <span>{{ cat.name }}</span>
+                        </button>
+                    </div>
+
+                    <!-- Exercise Selection Grid / Combo Box -->
+                    <div class="space-y-2">
+                        <div class="relative">
+                            <select v-model="currentExerciseName" @change="onExerciseSelect" class="w-full bg-slate-900 border border-slate-700 text-slate-100 rounded-xl py-3 px-3 appearance-none focus:outline-none focus:border-emerald-500 font-semibold text-sm">
+                                <option value="" disabled>-- 種目を選択してください --</option>
+                                <option v-for="ex in filteredExerciseMaster" :key="ex.id" :value="ex.name">
+                                    [{{ ex.category }}] {{ ex.name }}
+                                </option>
+                            </select>
+                            <i class="fa-solid fa-chevron-down absolute right-3 top-3.5 text-slate-400 pointer-events-none text-xs"></i>
+                        </div>
+
+                        <!-- Or Custom Exercise Input -->
+                        <div class="flex gap-2">
+                            <input type="text" v-model="customExerciseInput" placeholder="一覧にない新規種目を入力..." class="flex-1 bg-slate-900 border border-slate-700 text-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-500">
+                            <button @click="addCustomExercise" class="bg-slate-700 hover:bg-slate-600 text-xs px-3 py-2 rounded-xl text-slate-200 transition font-medium">
+                                マスタ登録
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Machine Setting Note for Current Exercise (Rule 8) -->
+                    <div v-if="currentExerciseMaster" class="bg-slate-900/80 border border-slate-800 rounded-xl p-3 text-xs space-y-2">
+                        <div class="flex justify-between items-center text-amber-400 font-semibold">
+                            <span class="flex items-center gap-1.5">
+                                <i class="fa-solid fa-sliders text-amber-400"></i>
+                                マシン/シート設定メモ
+                            </span>
+                            <button @click="isEditingMachineNote = !isEditingMachineNote" class="text-slate-400 hover:text-white underline">
+                                {{ isEditingMachineNote ? '完了' : '編集' }}
+                            </button>
+                        </div>
+
+                        <div v-if="!isEditingMachineNote" class="text-slate-300 bg-slate-950/60 p-2 rounded-lg border border-slate-800/80 min-h-[32px] flex items-center">
+                            {{ currentExerciseMaster.settingsNote || 'シート高さやピン位置メモは未登録です。' }}
+                        </div>
+                        <div v-else class="space-y-1">
+                            <textarea v-model="currentExerciseMaster.settingsNote" @change="saveMasterData" placeholder="例：シート高さ 4 / ピン位置 上から3番目" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-200 focus:outline-none text-xs" rows="2"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Exercise Entry Form (Rule 1, 7, 10 - Quick Increment & Previous Copy) -->
+                    <div v-if="activeWorkingExercise" class="bg-slate-900 rounded-xl p-3 border border-emerald-500/30 space-y-3">
+                        <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+                            <span class="font-bold text-emerald-400 text-sm flex items-center gap-1.5">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                                {{ activeWorkingExercise.name }} の入力
+                            </span>
+                            <span v-if="hasPreviousRecord" class="text-[11px] text-amber-400 bg-amber-950/60 border border-amber-800/50 px-2 py-0.5 rounded-full">
+                                前回: {{ previousRecordSummary }}
+                            </span>
+                        </div>
+
+                        <!-- Quick Increment Bar (+1kg, +2.5kg, +5kg) -->
+                        <div class="space-y-1">
+                            <label class="text-[11px] text-slate-400 font-medium">重量のクイック調整 (1セット目に適用)</label>
+                            <div class="grid grid-cols-5 gap-1.5">
+                                <button @click="adjustWeight(-2.5)" class="bg-slate-800 hover:bg-slate-700 text-slate-300 py-1.5 rounded-lg text-xs font-bold active:scale-95 transition border border-slate-700">-2.5kg</button>
+                                <button @click="adjustWeight(-1)" class="bg-slate-800 hover:bg-slate-700 text-slate-300 py-1.5 rounded-lg text-xs font-bold active:scale-95 transition border border-slate-700">-1kg</button>
+                                <button @click="adjustWeight(1)" class="bg-emerald-950 hover:bg-emerald-900 text-emerald-300 py-1.5 rounded-lg text-xs font-bold active:scale-95 transition border border-emerald-800/60">+1kg</button>
+                                <button @click="adjustWeight(2.5)" class="bg-emerald-950 hover:bg-emerald-900 text-emerald-300 py-1.5 rounded-lg text-xs font-bold active:scale-95 transition border border-emerald-800/60">+2.5kg</button>
+                                <button @click="adjustWeight(5)" class="bg-emerald-950 hover:bg-emerald-900 text-emerald-300 py-1.5 rounded-lg text-xs font-bold active:scale-95 transition border border-emerald-800/60">+5kg</button>
+                            </div>
+                        </div>
+
+                        <!-- Sets Input Table -->
+                        <div class="space-y-2">
+                            <div class="grid grid-cols-12 gap-2 text-[11px] text-slate-400 font-semibold px-1 text-center">
+                                <span class="col-span-2">セット</span>
+                                <span class="col-span-4">負荷 (kg)</span>
+                                <span class="col-span-4">回数 (reps)</span>
+                                <span class="col-span-2">削除</span>
+                            </div>
+
+                            <div v-for="(set, sIdx) in activeWorkingExercise.sets" :key="sIdx" class="grid grid-cols-12 gap-2 items-center">
+                                <span class="col-span-2 text-center text-xs font-bold text-slate-400 bg-slate-800 py-2 rounded-lg">
+                                    #{{ sIdx + 1 }}
+                                </span>
+                                <div class="col-span-4 relative">
+                                    <input type="number" step="0.5" v-model.number="set.weight" class="w-full bg-slate-950 border border-slate-700 text-center font-bold text-slate-100 rounded-lg py-2 text-sm focus:outline-none focus:border-emerald-500">
+                                </div>
+                                <div class="col-span-4 relative">
+                                    <input type="number" v-model.number="set.reps" class="w-full bg-slate-950 border border-slate-700 text-center font-bold text-slate-100 rounded-lg py-2 text-sm focus:outline-none focus:border-emerald-500">
+                                </div>
+                                <div class="col-span-2 text-center">
+                                    <button @click="removeSet(sIdx)" class="text-slate-500 hover:text-rose-400 p-2 transition">
+                                        <i class="fa-solid fa-trash-can text-sm"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Add Set & Note Controls -->
+                        <div class="flex gap-2 pt-1">
+                            <button @click="addSet" class="flex-1 bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 rounded-xl py-2 text-xs font-bold transition flex items-center justify-center gap-1.5">
+                                <i class="fa-solid fa-plus text-xs"></i>
+                                セット追加
+                            </button>
+                            <button @click="copyLastSet" class="bg-slate-800 hover:bg-slate-700 text-amber-400 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold transition flex items-center justify-center gap-1.5">
+                                <i class="fa-solid fa-clone text-xs"></i>
+                                同条件追加
+                            </button>
+                        </div>
+
+                        <!-- Exercise Memo -->
+                        <input type="text" v-model="activeWorkingExercise.note" placeholder="この種目のメモ (例: フォーム意識、最後ドロップセット)" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-emerald-500">
+
+                        <!-- Confirm Add to Today's Log -->
+                        <button @click="saveExerciseToDailyLog" class="w-full bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-500 hover:to-green-400 text-white font-bold py-3 rounded-xl shadow-lg shadow-emerald-900/30 active:scale-98 transition flex items-center justify-center gap-2 text-sm">
+                            <i class="fa-solid fa-check-circle"></i>
+                            本日の記録に追加・更新
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Today's Recorded Exercises List -->
+                <div class="bg-cardbg rounded-2xl p-4 border border-borderbg space-y-3 shadow-md">
+                    <div class="flex justify-between items-center border-b border-borderbg pb-2">
+                        <h2 class="font-bold text-slate-200 text-sm flex items-center gap-2">
+                            <i class="fa-solid fa-list-check text-emerald-400"></i>
+                            {{ selectedDate }} の記録一覧
+                        </h2>
+                        <span class="text-xs text-slate-400 font-semibold">合計 {{ currentDailyLog.exercises.length }} 種目</span>
+                    </div>
+
+                    <div v-if="currentDailyLog.exercises.length === 0" class="text-center py-8 text-slate-500 space-y-2">
+                        <i class="fa-solid fa-dumbbell text-3xl opacity-30"></i>
+                        <p class="text-xs">この日の記録はまだありません。<br>上のフォームから種目を登録しましょう！</p>
+                    </div>
+
+                    <div v-else class="space-y-3">
+                        <div v-for="(ex, index) in currentDailyLog.exercises" :key="index" class="bg-slate-900 border border-slate-800 rounded-xl p-3 space-y-2">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs bg-slate-800 text-emerald-400 font-bold px-2 py-0.5 rounded-md border border-slate-700">
+                                            {{ ex.category }}
+                                        </span>
+                                        <h3 class="font-bold text-slate-100 text-sm">{{ ex.name }}</h3>
+                                    </div>
+                                    <p v-if="ex.note" class="text-[11px] text-slate-400 mt-1 italic">
+                                        <i class="fa-regular fa-comment-dots mr-1"></i>{{ ex.note }}
+                                    </p>
+                                </div>
+
+                                <div class="flex items-center gap-1">
+                                    <button @click="editRecordedExercise(index)" class="text-slate-400 hover:text-emerald-400 p-1.5 transition">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </button>
+                                    <button @click="deleteRecordedExercise(index)" class="text-slate-400 hover:text-rose-400 p-1.5 transition">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Sets summary tags -->
+                            <div class="flex flex-wrap gap-1.5 pt-1">
+                                <div v-for="(s, sI) in ex.sets" :key="sI" class="bg-slate-950 border border-slate-800 px-2.5 py-1 rounded-lg text-xs font-mono font-medium text-slate-300">
+                                    <span class="text-slate-500 mr-1">#{{ sI + 1 }}</span>
+                                    <span class="text-emerald-400 font-bold">{{ s.weight }}</span><span class="text-slate-400 text-[10px]">kg</span> 
+                                    <span class="text-slate-500 mx-0.5">×</span> 
+                                    <span class="text-amber-400 font-bold">{{ s.reps }}</span><span class="text-slate-400 text-[10px]">回</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Daily Overall Note -->
+                        <div class="pt-2 border-t border-slate-800 space-y-1">
+                            <label class="text-xs text-slate-400 font-medium flex items-center gap-1">
+                                <i class="fa-solid fa-sticky-note text-amber-400"></i>
+                                本日の全体メモ・コンディション
+                            </label>
+                            <textarea v-model="currentDailyLog.memo" @change="saveLogsToStorage" placeholder="例：体が軽かった、水分補給1.5L、プロテイン摂取" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500" rows="2"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. CALENDAR TAB -->
+            <section v-if="activeTab === 'calendar'" class="space-y-4">
+                <div class="bg-cardbg rounded-2xl p-4 border border-borderbg space-y-4 shadow-md">
+                    <!-- Month Navigation Header -->
+                    <div class="flex items-center justify-between">
+                        <button @click="changeCalendarMonth(-1)" class="p-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-slate-300 transition">
+                            <i class="fa-solid fa-chevron-left"></i>
+                        </button>
+                        <h2 class="font-bold text-base text-slate-100 flex items-center gap-2">
+                            <i class="fa-regular fa-calendar-days text-emerald-400"></i>
+                            {{ calendarYear }}年 {{ calendarMonth + 1 }}月
+                        </h2>
+                        <button @click="changeCalendarMonth(1)" class="p-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-slate-300 transition">
+                            <i class="fa-solid fa-chevron-right"></i>
+                        </button>
+                    </div>
+
+                    <!-- Calendar Grid -->
+                    <div class="grid grid-cols-7 gap-1 text-center text-xs font-semibold text-slate-400 pb-1 border-b border-slate-800">
+                        <span class="text-rose-400">日</span>
+                        <span>月</span>
+                        <span>火</span>
+                        <span>水</span>
+                        <span>木</span>
+                        <span>金</span>
+                        <span class="text-sky-400">土</span>
+                    </div>
+
+                    <div class="grid grid-cols-7 gap-1 text-center">
+                        <div v-for="(cell, cIdx) in calendarDays" :key="cIdx" 
+                             @click="selectDateFromCalendar(cell.dateStr)"
+                             :class="[
+                                'min-h-[52px] rounded-xl p-1 flex flex-col justify-between items-center transition cursor-pointer border',
+                                !cell.isCurrentMonth ? 'opacity-30 border-transparent' : '',
+                                cell.dateStr === selectedDate ? 'border-emerald-500 bg-emerald-950/40' : 'border-slate-800 bg-slate-900/60 hover:bg-slate-800',
+                                cell.hasWorkout ? 'ring-1 ring-emerald-500/50' : ''
+                             ]">
+                            <span :class="[
+                                'text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center',
+                                cell.isToday ? 'bg-emerald-500 text-slate-950' : 'text-slate-300'
+                            ]">{{ cell.dayNum }}</span>
+
+                            <!-- Workout Indicators -->
+                            <div v-if="cell.hasWorkout" class="flex flex-col items-center gap-0.5">
+                                <span class="text-[10px] text-emerald-400 font-bold leading-tight">
+                                    <i class="fa-solid fa-dumbbell"></i>
+                                </span>
+                                <span class="text-[9px] bg-slate-800 px-1 rounded text-slate-300 font-mono">
+                                    {{ cell.exerciseCount }}種目
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Calendar Selected Day Detail & Copy Action (Rule 3 & 4) -->
+                <div class="bg-cardbg rounded-2xl p-4 border border-borderbg space-y-3 shadow-md">
+                    <div class="flex justify-between items-center border-b border-borderbg pb-2">
+                        <h3 class="font-bold text-slate-200 text-sm">
+                            {{ selectedDate }} のログ詳細
+                        </h3>
+
+                        <!-- Copy to Another Day Button (Rule 4) -->
+                        <button v-if="currentDailyLog.exercises.length > 0" @click="openCopyModal" class="bg-amber-600 hover:bg-amber-500 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-md shadow-amber-900/30">
+                            <i class="fa-solid fa-copy"></i>
+                            別日に複製
+                        </button>
+                    </div>
+
+                    <div v-if="currentDailyLog.exercises.length === 0" class="text-slate-500 text-xs py-4 text-center">
+                        この日の記録はありません。タップして日付を選び、記録を作成できます。
+                    </div>
+
+                    <div v-else class="space-y-2">
+                        <div v-for="(ex, eI) in currentDailyLog.exercises" :key="eI" class="bg-slate-900 p-2.5 rounded-xl text-xs flex justify-between items-center border border-slate-800">
+                            <div>
+                                <span class="font-bold text-slate-200">{{ ex.name }}</span>
+                                <span class="text-[10px] text-emerald-400 ml-2 bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">{{ ex.category }}</span>
+                            </div>
+                            <div class="text-slate-400 font-mono">
+                                {{ ex.sets.length }}セット (最大 {{ getMaxWeight(ex) }}kg)
+                            </div>
+                        </div>
+                        <p v-if="currentDailyLog.memo" class="text-xs text-amber-300/80 bg-slate-900/80 p-2 rounded-xl border border-slate-800">
+                            メモ: {{ currentDailyLog.memo }}
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 3. MACHINE SETTINGS & MASTER MANAGER (Rule 8 & 9) -->
+            <section v-if="activeTab === 'machines'" class="space-y-4">
+                <div class="bg-cardbg rounded-2xl p-4 border border-borderbg space-y-4 shadow-md">
+                    <div class="flex justify-between items-center border-b border-borderbg pb-2">
+                        <div>
+                            <h2 class="font-bold text-slate-100 text-sm flex items-center gap-2">
+                                <i class="fa-solid fa-sliders text-amber-400"></i>
+                                マシン・シート設定メモ一覧
+                            </h2>
+                            <p class="text-xs text-slate-400 mt-0.5">ジムで迷わないためのシート高・ピン位置・フォームメモ</p>
+                        </div>
+                    </div>
+
+                    <!-- Category Filter -->
+                    <div class="flex gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar">
+                        <button @click="machineCategoryFilter = 'ALL'" :class="['px-3 py-1.5 rounded-xl transition', machineCategoryFilter === 'ALL' ? 'bg-amber-600 text-white font-bold' : 'bg-slate-800 text-slate-400']">すべて</button>
+                        <button v-for="cat in categories" :key="cat.id" @click="machineCategoryFilter = cat.name" :class="['px-3 py-1.5 rounded-xl transition', machineCategoryFilter === cat.name ? 'bg-amber-600 text-white font-bold' : 'bg-slate-800 text-slate-400']">
+                            {{ cat.name }}
+                        </button>
+                    </div>
+
+                    <!-- Machine List -->
+                    <div class="space-y-3">
+                        <div v-for="m in filteredMasterList" :key="m.id" class="bg-slate-900 border border-slate-800 rounded-xl p-3 space-y-2">
+                            <div class="flex justify-between items-center">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-[10px] bg-slate-800 text-emerald-400 px-2 py-0.5 rounded font-bold border border-slate-700">
+                                        {{ m.category }}
+                                    </span>
+                                    <span class="font-bold text-slate-100 text-sm">{{ m.name }}</span>
+                                </div>
+                                <button @click="deleteMasterItem(m.id)" class="text-slate-500 hover:text-rose-400 text-xs transition">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </div>
+
+                            <!-- Settings Note Input Area -->
+                            <div class="space-y-1">
+                                <label class="text-[10px] text-slate-400">シートの高さ・目盛りメモ</label>
+                                <textarea v-model="m.settingsNote" @change="saveMasterData" placeholder="例：シート高さ 3, 足置き位置 2, ピン 40kg" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-amber-500" rows="2"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 4. ANALYTICS & CSV DATA MANAGEMENT (Rule 6) -->
+            <section v-if="activeTab === 'analytics'" class="space-y-4">
+                <!-- PC/Mobile Stats Overview Cards -->
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    <div class="bg-cardbg border border-borderbg p-3.5 rounded-2xl shadow-md">
+                        <span class="text-xs text-slate-400 block font-medium">通算ワークアウト日数</span>
+                        <span class="text-2xl font-black text-emerald-400">{{ totalWorkoutDays }} <span class="text-xs text-slate-400">日</span></span>
+                    </div>
+                    <div class="bg-cardbg border border-borderbg p-3.5 rounded-2xl shadow-md">
+                        <span class="text-xs text-slate-400 block font-medium">総挙上重量 (推定)</span>
+                        <span class="text-2xl font-black text-amber-400">{{ totalLiftedWeight.toLocaleString() }} <span class="text-xs text-slate-400">kg</span></span>
+                    </div>
+                    <div class="bg-cardbg border border-borderbg p-3.5 rounded-2xl shadow-md col-span-2 md:col-span-1">
+                        <span class="text-xs text-slate-400 block font-medium">記録済み種目数</span>
+                        <span class="text-2xl font-black text-sky-400">{{ exerciseMaster.length }} <span class="text-xs text-slate-400">種目</span></span>
+                    </div>
+                </div>
+
+                <!-- Category Frequency Chart -->
+                <div class="bg-cardbg rounded-2xl p-4 border border-borderbg space-y-3 shadow-md">
+                    <h3 class="font-bold text-slate-100 text-sm flex items-center gap-2">
+                        <i class="fa-solid fa-chart-pie text-emerald-400"></i>
+                        部位別トレーニング割合
+                    </h3>
+                    <div class="h-56 relative flex items-center justify-center">
+                        <canvas id="categoryChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- CSV Export & Import Section (Rule 6) -->
+                <div class="bg-cardbg rounded-2xl p-4 border border-borderbg space-y-3 shadow-md">
+                    <h3 class="font-bold text-slate-100 text-sm flex items-center gap-2 border-b border-borderbg pb-2">
+                        <i class="fa-solid fa-file-csv text-sky-400"></i>
+                        データ連携・CSV書き出し/読み込み (PC・バックアップ用)
+                    </h3>
+                    
+                    <p class="text-xs text-slate-400 leading-relaxed">
+                        PCのExcelで統計分析したり、他の端末へ引き継ぐためのCSV入出力機能です。
+                    </p>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+                        <!-- Export -->
+                        <button @click="exportCSV" class="bg-sky-600 hover:bg-sky-500 text-white font-bold py-3 px-4 rounded-xl text-xs transition flex items-center justify-center gap-2 shadow-lg shadow-sky-900/30">
+                            <i class="fa-solid fa-download"></i>
+                            全記録をCSVで書き出す (ダウンロード)
+                        </button>
+
+                        <!-- Import -->
+                        <label class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold py-3 px-4 rounded-xl text-xs transition flex items-center justify-center gap-2 cursor-pointer text-center">
+                            <i class="fa-solid fa-upload"></i>
+                            CSVファイルを読み込む
+                            <input type="file" accept=".csv" @change="importCSV" class="hidden">
+                        </label>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- Copy to Another Day Modal (Rule 4) -->
+        <div v-if="showCopyModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div class="bg-cardbg border border-borderbg rounded-2xl p-5 max-w-sm w-full space-y-4 shadow-2xl">
+                <h3 class="font-bold text-slate-100 text-base flex items-center gap-2">
+                    <i class="fa-solid fa-copy text-amber-400"></i>
+                    記録を別の日に複製
+                </h3>
+
+                <p class="text-xs text-slate-400">
+                    <span class="text-emerald-400 font-bold">{{ selectedDate }}</span> の内容を以下の日付にコピーします。
+                </p>
+
+                <div>
+                    <label class="text-xs text-slate-300 font-medium block mb-1">コピー先の日付</label>
+                    <input type="date" v-model="targetCopyDate" class="w-full bg-slate-900 border border-slate-700 text-emerald-400 font-bold rounded-xl p-3 text-center text-sm focus:outline-none focus:border-emerald-500">
+                </div>
+
+                <div class="flex gap-2 pt-2">
+                    <button @click="showCopyModal = false" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 py-2.5 rounded-xl text-xs font-bold transition">
+                        キャンセル
+                    </button>
+                    <button @click="executeCopy" class="flex-1 bg-amber-600 hover:bg-amber-500 text-white py-2.5 rounded-xl text-xs font-bold transition shadow-lg shadow-amber-900/30">
+                        複製を実行
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Responsive Navigation Bar -->
+        <nav class="fixed bottom-0 left-0 right-0 bg-cardbg/95 backdrop-blur-md border-t border-borderbg z-40 max-w-4xl mx-auto">
+            <div class="grid grid-cols-4 text-center py-2">
+                <button @click="activeTab = 'workout'" :class="['flex flex-col items-center gap-1 transition', activeTab === 'workout' ? 'text-emerald-400 font-bold' : 'text-slate-500 hover:text-slate-300']">
+                    <i class="fa-solid fa-dumbbell text-lg"></i>
+                    <span class="text-[10px]">記録</span>
+                </button>
+
+                <button @click="activeTab = 'calendar'" :class="['flex flex-col items-center gap-1 transition', activeTab === 'calendar' ? 'text-emerald-400 font-bold' : 'text-slate-500 hover:text-slate-300']">
+                    <i class="fa-regular fa-calendar-days text-lg"></i>
+                    <span class="text-[10px]">カレンダー</span>
+                </button>
+
+                <button @click="activeTab = 'machines'" :class="['flex flex-col items-center gap-1 transition', activeTab === 'machines' ? 'text-emerald-400 font-bold' : 'text-slate-500 hover:text-slate-300']">
+                    <i class="fa-solid fa-sliders text-lg"></i>
+                    <span class="text-[10px]">マシンメモ</span>
+                </button>
+
+                <button @click="activeTab = 'analytics'" :class="['flex flex-col items-center gap-1 transition', activeTab === 'analytics' ? 'text-emerald-400 font-bold' : 'text-slate-500 hover:text-slate-300']">
+                    <i class="fa-solid fa-chart-line text-lg"></i>
+                    <span class="text-[10px]">統計・CSV</span>
+                </button>
+            </div>
+        </nav>
+
+    </div>
+
+    <script>
+        const { createApp, ref, computed, watch, onMounted, nextTick } = Vue;
+
+        createApp({
+            setup() {
+                // Application State
+                const activeTab = ref('workout');
+                const selectedDate = ref(new Date().toISOString().split('T')[0]);
+                const selectedCategory = ref('胸');
+                const currentExerciseName = ref('');
+                const customExerciseInput = ref('');
+                const isEditingMachineNote = ref(false);
+                const machineCategoryFilter = ref('ALL');
+
+                // Modal state
+                const showCopyModal = ref(false);
+                const targetCopyDate = ref(new Date().toISOString().split('T')[0]);
+
+                // Calendar Navigation State
+                const calendarYear = ref(new Date().getFullYear());
+                const calendarMonth = ref(new Date().getMonth());
+
+                // Default Preset Categories (Rule 1)
+                const categories = [
+                    { id: '胸', name: '胸', icon: '胸' },
+                    { id: '背中', name: '背中', icon: '背' },
+                    { id: '腕', name: '腕', icon: '腕' },
+                    { id: '腹', name: '腹', icon: '腹' },
+                    { id: '脚', name: '脚', icon: '脚' },
+                    { id: '肩', name: '肩', icon: '肩' },
+                    { id: '自由/有酸素', name: '自由/有酸素', icon: '走' },
+                ];
+
+                // Initial Preset Exercises Master Data (Rule 9)
+                const defaultMaster = [
+                    { id: '1', name: 'チェストプレス', category: '胸', settingsNote: 'シート高さ: 3, グリップ位置: パラレル', defaultWeight: 30, defaultReps: 10 },
+                    { id: '2', name: 'ペックフライ', category: '胸', settingsNote: 'シート高さ: 2, アーム開き: 3番目', defaultWeight: 25, defaultReps: 12 },
+                    { id: '3', name: 'ラットプルダウン', category: '背中', settingsNote: '太もも固定パット: 上から2番目', defaultWeight: 35, defaultReps: 10 },
+                    { id: '4', name: 'シーテッドロー', category: '背中', settingsNote: 'チェストパット位置: 4', defaultWeight: 30, defaultReps: 10 },
+                    { id: '5', name: 'アブドミナルクランチ', category: '腹', settingsNote: '足の高さ: 2', defaultWeight: 25, defaultReps: 15 },
+                    { id: '6', name: 'レッグプレス', category: '脚', settingsNote: '背もたれ角度: 3番目', defaultWeight: 60, defaultReps: 10 },
+                    { id: '7', name: 'レッグエクステンション', category: '脚', settingsNote: '足首パット: 2, 背もたれ: 4', defaultWeight: 25, defaultReps: 12 },
+                    { id: '8', name: 'アームカール (ダンベル)', category: '腕', settingsNote: 'ベンチ角度: インクライン 60度', defaultWeight: 10, defaultReps: 10 },
+                    { id: '9', name: 'トレッドミル (ランニング)', category: '自由/有酸素', settingsNote: '傾斜: 2.0%, 速度 8.5km/h', defaultWeight: 0, defaultReps: 20 },
+                ];
+
+                const exerciseMaster = ref([]);
+                const logs = ref({}); // Key: 'YYYY-MM-DD', Value: { date, exercises: [], memo: '' }
+
+                // Currently editing exercise object in form
+                const activeWorkingExercise = ref(null);
+                const hasPreviousRecord = ref(false);
+                const previousRecordSummary = ref('');
+
+                // Initialize Data from localStorage
+                onMounted(() => {
+                    const savedMaster = localStorage.getItem('fitlog_master');
+                    if (savedMaster) {
+                        try { exerciseMaster.value = JSON.parse(savedMaster); } catch(e) { exerciseMaster.value = defaultMaster; }
+                    } else {
+                        exerciseMaster.value = defaultMaster;
+                        saveMasterData();
+                    }
+
+                    const savedLogs = localStorage.getItem('fitlog_logs');
+                    if (savedLogs) {
+                        try { logs.value = JSON.parse(savedLogs); } catch(e) { logs.value = {}; }
+                    }
+
+                    ensureDailyLogExists(selectedDate.value);
+                    renderChart();
+                });
+
+                // Watchers for Persistence
+                const saveMasterData = () => {
+                    localStorage.setItem('fitlog_master', JSON.stringify(exerciseMaster.value));
+                };
+
+                const saveLogsToStorage = () => {
+                    localStorage.setItem('fitlog_logs', JSON.stringify(logs.value));
+                };
+
+                const ensureDailyLogExists = (dateStr) => {
+                    if (!logs.value[dateStr]) {
+                        logs.value[dateStr] = {
+                            date: dateStr,
+                            exercises: [],
+                            memo: ''
+                        };
+                    }
+                };
+
+                // Computed Properties
+                const currentDailyLog = computed(() => {
+                    ensureDailyLogExists(selectedDate.value);
+                    return logs.value[selectedDate.value];
+                });
+
+                const formattedSelectedDateLabel = computed(() => {
+                    if (!selectedDate.value) return '';
+                    const d = new Date(selectedDate.value);
+                    const days = ['日', '月', '火', '水', '木', '金', '土'];
+                    return `${d.getMonth() + 1}月${d.getDate()}日 (${days[d.getDay()]})`;
+                });
+
+                const filteredExerciseMaster = computed(() => {
+                    return exerciseMaster.value.filter(ex => ex.category === selectedCategory.value);
+                });
+
+                const currentExerciseMaster = computed(() => {
+                    return exerciseMaster.value.find(ex => ex.name === currentExerciseName.value);
+                });
+
+                const filteredMasterList = computed(() => {
+                    if (machineCategoryFilter.value === 'ALL') return exerciseMaster.value;
+                    return exerciseMaster.value.filter(m => m.category === machineCategoryFilter.value);
+                });
+
+                const totalWorkoutDays = computed(() => {
+                    return Object.keys(logs.value).filter(k => logs.value[k].exercises && logs.value[k].exercises.length > 0).length;
+                });
+
+                const totalLiftedWeight = computed(() => {
+                    let sum = 0;
+                    Object.values(logs.value).forEach(log => {
+                        if (log.exercises) {
+                            log.exercises.forEach(ex => {
+                                if (ex.sets) {
+                                    ex.sets.forEach(s => {
+                                        sum += (s.weight || 0) * (s.reps || 0);
+                                    });
+                                }
+                            });
+                        }
+                    });
+                    return sum;
+                });
+
+                // Exercise Selection Trigger -> Auto-fill Previous Weight & Sets (Rule 7)
+                const onExerciseSelect = () => {
+                    if (!currentExerciseName.value) return;
+
+                    const exName = currentExerciseName.value;
+                    const masterEx = exerciseMaster.value.find(m => m.name === exName);
+
+                    // Find most recent previous log for this exercise
+                    let prevSets = null;
+                    const sortedDates = Object.keys(logs.value).sort().reverse();
+
+                    for (let d of sortedDates) {
+                        const dayLog = logs.value[d];
+                        if (dayLog && dayLog.exercises) {
+                            const found = dayLog.exercises.find(e => e.name === exName);
+                            if (found && found.sets && found.sets.length > 0) {
+                                prevSets = found.sets;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (prevSets) {
+                        hasPreviousRecord.value = true;
+                        previousRecordSummary.value = `${prevSets[0].weight}kg × ${prevSets[0].reps}回 (${prevSets.length}セット)`;
+                        // Copy sets from last time
+                        activeWorkingExercise.value = {
+                            name: exName,
+                            category: masterEx ? masterEx.category : selectedCategory.value,
+                            sets: prevSets.map(s => ({ weight: s.weight, reps: s.reps })),
+                            note: ''
+                        };
+                    } else {
+                        hasPreviousRecord.value = false;
+                        previousRecordSummary.value = '';
+                        // Default initial sets
+                        const defaultW = masterEx ? masterEx.defaultWeight : 20;
+                        const defaultR = masterEx ? masterEx.defaultReps : 10;
+                        activeWorkingExercise.value = {
+                            name: exName,
+                            category: masterEx ? masterEx.category : selectedCategory.value,
+                            sets: [
+                                { weight: defaultW, reps: defaultR },
+                                { weight: defaultW, reps: defaultR },
+                                { weight: defaultW, reps: defaultR }
+                            ],
+                            note: ''
+                        };
+                    }
+                };
+
+                // Quick Increment Weights Buttons (Rule 7)
+                const adjustWeight = (delta) => {
+                    if (!activeWorkingExercise.value || !activeWorkingExercise.value.sets) return;
+                    activeWorkingExercise.value.sets.forEach(s => {
+                        s.weight = Math.max(0, Math.round((s.weight + delta) * 10) / 10);
+                    });
+                };
+
+                const addSet = () => {
+                    if (!activeWorkingExercise.value) return;
+                    const lastSet = activeWorkingExercise.value.sets[activeWorkingExercise.value.sets.length - 1];
+                    activeWorkingExercise.value.sets.push({
+                        weight: lastSet ? lastSet.weight : 20,
+                        reps: lastSet ? lastSet.reps : 10
+                    });
+                };
+
+                const copyLastSet = () => {
+                    addSet();
+                };
+
+                const removeSet = (index) => {
+                    if (activeWorkingExercise.value && activeWorkingExercise.value.sets.length > 1) {
+                        activeWorkingExercise.value.sets.splice(index, 1);
+                    }
+                };
+
+                // Save or Update Exercise in Today's Log
+                const saveExerciseToDailyLog = () => {
+                    if (!activeWorkingExercise.value) return;
+
+                    ensureDailyLogExists(selectedDate.value);
+                    const daily = logs.value[selectedDate.value];
+
+                    // Check if already exists, replace or append
+                    const existingIdx = daily.exercises.findIndex(e => e.name === activeWorkingExercise.value.name);
+                    if (existingIdx >= 0) {
+                        daily.exercises[existingIdx] = JSON.parse(JSON.stringify(activeWorkingExercise.value));
+                    } else {
+                        daily.exercises.push(JSON.parse(JSON.stringify(activeWorkingExercise.value)));
+                    }
+
+                    saveLogsToStorage();
+
+                    // Trigger Confetti Animation for Motivation
+                    if (window.confetti) {
+                        confetti({
+                            particleCount: 40,
+                            spread: 60,
+                            origin: { y: 0.8 }
+                        });
+                    }
+
+                    // Reset active form
+                    activeWorkingExercise.value = null;
+                    currentExerciseName.value = '';
+                };
+
+                const addCustomExercise = () => {
+                    const name = customExerciseInput.value.trim();
+                    if (!name) return;
+
+                    const exists = exerciseMaster.value.find(e => e.name === name);
+                    if (!exists) {
+                        const newMaster = {
+                            id: Date.now().toString(),
+                            name: name,
+                            category: selectedCategory.value,
+                            settingsNote: '',
+                            defaultWeight: 20,
+                            defaultReps: 10
+                        };
+                        exerciseMaster.value.push(newMaster);
+                        saveMasterData();
+                    }
+
+                    currentExerciseName.value = name;
+                    onExerciseSelect();
+                    customExerciseInput.value = '';
+                };
+
+                const editRecordedExercise = (index) => {
+                    const ex = currentDailyLog.value.exercises[index];
+                    if (ex) {
+                        selectedCategory.value = ex.category;
+                        currentExerciseName.value = ex.name;
+                        activeWorkingExercise.value = JSON.parse(JSON.stringify(ex));
+                    }
+                };
+
+                const deleteRecordedExercise = (index) => {
+                    currentDailyLog.value.exercises.splice(index, 1);
+                    saveLogsToStorage();
+                };
+
+                const changeDate = (days) => {
+                    const d = new Date(selectedDate.value);
+                    d.setDate(d.getDate() + days);
+                    selectedDate.value = d.toISOString().split('T')[0];
+                    ensureDailyLogExists(selectedDate.value);
+                    activeWorkingExercise.value = null;
+                };
+
+                const onDateChange = () => {
+                    ensureDailyLogExists(selectedDate.value);
+                    activeWorkingExercise.value = null;
+                };
+
+                // Calendar Methods
+                const calendarDays = computed(() => {
+                    const year = calendarYear.value;
+                    const month = calendarMonth.value;
+
+                    const firstDay = new Date(year, month, 1);
+                    const lastDay = new Date(year, month + 1, 0);
+
+                    const days = [];
+                    const todayStr = new Date().toISOString().split('T')[0];
+
+                    // Padding previous month days
+                    const startDayOfWeek = firstDay.getDay();
+                    for (let i = startDayOfWeek - 1; i >= 0; i--) {
+                        const d = new Date(year, month, -i);
+                        const dateStr = d.toISOString().split('T')[0];
+                        days.push({
+                            dateStr,
+                            dayNum: d.getDate(),
+                            isCurrentMonth: false,
+                            isToday: dateStr === todayStr,
+                            hasWorkout: !!(logs.value[dateStr] && logs.value[dateStr].exercises && logs.value[dateStr].exercises.length > 0),
+                            exerciseCount: logs.value[dateStr]?.exercises?.length || 0
+                        });
+                    }
+
+                    // Current month days
+                    for (let i = 1; i <= lastDay.getDate(); i++) {
+                        const d = new Date(year, month, i);
+                        const dateStr = d.toISOString().split('T')[0];
+                        days.push({
+                            dateStr,
+                            dayNum: i,
+                            isCurrentMonth: true,
+                            isToday: dateStr === todayStr,
+                            hasWorkout: !!(logs.value[dateStr] && logs.value[dateStr].exercises && logs.value[dateStr].exercises.length > 0),
+                            exerciseCount: logs.value[dateStr]?.exercises?.length || 0
+                        });
+                    }
+
+                    return days;
+                });
+
+                const changeCalendarMonth = (delta) => {
+                    let m = calendarMonth.value + delta;
+                    if (m < 0) {
+                        calendarMonth.value = 11;
+                        calendarYear.value--;
+                    } else if (m > 11) {
+                        calendarMonth.value = 0;
+                        calendarYear.value++;
+                    } else {
+                        calendarMonth.value = m;
+                    }
+                };
+
+                const selectDateFromCalendar = (dateStr) => {
+                    selectedDate.value = dateStr;
+                    ensureDailyLogExists(dateStr);
+                };
+
+                // Copy functionality (Rule 4)
+                const openCopyModal = () => {
+                    targetCopyDate.value = new Date().toISOString().split('T')[0];
+                    showCopyModal.value = true;
+                };
+
+                const executeCopy = () => {
+                    if (!selectedDate.value || !targetCopyDate.value) return;
+
+                    const source = logs.value[selectedDate.value];
+                    if (!source) return;
+
+                    logs.value[targetCopyDate.value] = {
+                        date: targetCopyDate.value,
+                        exercises: JSON.parse(JSON.stringify(source.exercises || [])),
+                        memo: source.memo ? `(複製: ${source.date}) ${source.memo}` : ''
+                    };
+
+                    saveLogsToStorage();
+                    showCopyModal.value = false;
+                    selectedDate.value = targetCopyDate.value;
+                    activeTab.value = 'workout';
+                };
+
+                const getMaxWeight = (ex) => {
+                    if (!ex.sets || ex.sets.length === 0) return 0;
+                    return Math.max(...ex.sets.map(s => s.weight || 0));
+                };
+
+                const deleteMasterItem = (id) => {
+                    exerciseMaster.value = exerciseMaster.value.filter(m => m.id !== id);
+                    saveMasterData();
+                };
+
+                // CSV Export (Rule 6)
+                const exportCSV = () => {
+                    let csvContent = "\uFEFF日付,部位,種目名,セット番号,重量(kg),回数,種目メモ,全体メモ\n";
+
+                    Object.keys(logs.value).sort().forEach(date => {
+                        const dayLog = logs.value[date];
+                        if (dayLog.exercises && dayLog.exercises.length > 0) {
+                            dayLog.exercises.forEach(ex => {
+                                ex.sets.forEach((set, sIdx) => {
+                                    const row = [
+                                        `"${date}"`,
+                                        `"${ex.category || ''}"`,
+                                        `"${ex.name || ''}"`,
+                                        sIdx + 1,
+                                        set.weight || 0,
+                                        set.reps || 0,
+                                        `"${(ex.note || '').replace(/"/g, '""')}"`,
+                                        `"${(dayLog.memo || '').replace(/"/g, '""')}"`
+                                    ];
+                                    csvContent += row.join(",") + "\n";
+                                });
+                            });
+                        }
+                    });
+
+                    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement("a");
+                    link.setAttribute("href", url);
+                    link.setAttribute("download", `FitLog_Export_${new Date().toISOString().split('T')[0]}.csv`);
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                };
+
+                // CSV Import (Rule 6)
+                const importCSV = (event) => {
+                    const file = event.target.files[0];
+                    if (!file) return;
+
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const text = e.target.result;
+                        const lines = text.split(/\r\n|\n/);
+                        if (lines.length <= 1) return;
+
+                        let importedCount = 0;
+
+                        for (let i = 1; i < lines.length; i++) {
+                            const line = lines[i].trim();
+                            if (!line) continue;
+
+                            // Regex for CSV parsing handling quotes
+                            const parts = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
+                            if (parts && parts.length >= 6) {
+                                const clean = parts.map(p => p.replace(/^"|"$/g, '').trim());
+                                const [date, category, name, setNum, weight, reps, exNote, dayMemo] = clean;
+
+                                if (date && name) {
+                                    if (!logs.value[date]) {
+                                        logs.value[date] = { date, exercises: [], memo: dayMemo || '' };
+                                    }
+
+                                    let ex = logs.value[date].exercises.find(e => e.name === name);
+                                    if (!ex) {
+                                        ex = { category: category || '胸', name: name, sets: [], note: exNote || '' };
+                                        logs.value[date].exercises.push(ex);
+                                    }
+
+                                    ex.sets.push({
+                                        weight: parseFloat(weight) || 0,
+                                        reps: parseInt(reps) || 0
+                                    });
+
+                                    importedCount++;
+                                }
+                            }
+                        }
+
+                        saveLogsToStorage();
+                        alert(`CSVの読み込みが完了しました (${importedCount}件のセットをインポート)`);
+                    };
+                    reader.readAsText(file);
+                };
+
+                // Chart.js Category Analytics Rendering
+                let chartInstance = null;
+                const renderChart = () => {
+                    nextTick(() => {
+                        const ctx = document.getElementById('categoryChart');
+                        if (!ctx) return;
+
+                        const categoryCounts = {};
+                        categories.forEach(c => categoryCounts[c.name] = 0);
+
+                        Object.values(logs.value).forEach(log => {
+                            if (log.exercises) {
+                                log.exercises.forEach(ex => {
+                                    if (categoryCounts[ex.category] !== undefined) {
+                                        categoryCounts[ex.category] += ex.sets ? ex.sets.length : 1;
+                                    }
+                                });
+                            }
+                        });
+
+                        if (chartInstance) chartInstance.destroy();
+
+                        chartInstance = new Chart(ctx, {
+                            type: 'doughnut',
+                            data: {
+                                labels: Object.keys(categoryCounts),
+                                datasets: [{
+                                    data: Object.values(categoryCounts),
+                                    backgroundColor: [
+                                        '#10b981', '#3b82f6', '#f59e0b', '#ec4899', 
+                                        '#8b5cf6', '#06b6d4', '#64748b'
+                                    ],
+                                    borderWidth: 2,
+                                    borderColor: '#1e293b'
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: {
+                                        position: 'bottom',
+                                        labels: { color: '#94a3b8', font: { size: 11 } }
+                                    }
+                                }
+                            }
+                        });
+                    });
+                };
+
+                watch(activeTab, (newTab) => {
+                    if (newTab === 'analytics') {
+                        renderChart();
+                    }
+                });
+
+                return {
+                    activeTab,
+                    selectedDate,
+                    selectedCategory,
+                    currentExerciseName,
+                    customExerciseInput,
+                    isEditingMachineNote,
+                    machineCategoryFilter,
+                    categories,
+                    exerciseMaster,
+                    currentDailyLog,
+                    formattedSelectedDateLabel,
+                    filteredExerciseMaster,
+                    currentExerciseMaster,
+                    filteredMasterList,
+                    activeWorkingExercise,
+                    hasPreviousRecord,
+                    previousRecordSummary,
+                    totalWorkoutDays,
+                    totalLiftedWeight,
+                    showCopyModal,
+                    targetCopyDate,
+                    calendarYear,
+                    calendarMonth,
+                    calendarDays,
+                    changeDate,
+                    onDateChange,
+                    onExerciseSelect,
+                    adjustWeight,
+                    addSet,
+                    copyLastSet,
+                    removeSet,
+                    saveExerciseToDailyLog,
+                    addCustomExercise,
+                    editRecordedExercise,
+                    deleteRecordedExercise,
+                    changeCalendarMonth,
+                    selectDateFromCalendar,
+                    openCopyModal,
+                    executeCopy,
+                    getMaxWeight,
+                    deleteMasterItem,
+                    exportCSV,
+                    importCSV,
+                    saveLogsToStorage,
+                    saveMasterData
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
