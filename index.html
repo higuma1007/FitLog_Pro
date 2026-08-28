@@ -574,11 +574,25 @@
     <script>
         const { createApp, ref, computed, watch, onMounted, nextTick } = Vue;
 
+        // タイムゾーンのズレを防止するためのローカル日付フォーマット関数
+        const getLocalDateStr = (d = new Date()) => {
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+
+        const formatYMD = (year, month, day) => {
+            const m = String(month).padStart(2, '0');
+            const d = String(day).padStart(2, '0');
+            return `${year}-${m}-${d}`;
+        };
+
         createApp({
             setup() {
                 // Application State
                 const activeTab = ref('workout');
-                const selectedDate = ref(new Date().toISOString().split('T')[0]);
+                const selectedDate = ref(getLocalDateStr());
                 const selectedCategory = ref('胸');
                 const currentExerciseName = ref('');
                 const customExerciseInput = ref('');
@@ -587,7 +601,7 @@
 
                 // Modal state
                 const showCopyModal = ref(false);
-                const targetCopyDate = ref(new Date().toISOString().split('T')[0]);
+                const targetCopyDate = ref(getLocalDateStr());
 
                 // Calendar Navigation State
                 const calendarYear = ref(new Date().getFullYear());
@@ -856,9 +870,10 @@
                 };
 
                 const changeDate = (days) => {
-                    const d = new Date(selectedDate.value);
+                    const parts = selectedDate.value.split('-');
+                    const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
                     d.setDate(d.getDate() + days);
-                    selectedDate.value = d.toISOString().split('T')[0];
+                    selectedDate.value = getLocalDateStr(d);
                     ensureDailyLogExists(selectedDate.value);
                     activeWorkingExercise.value = null;
                 };
@@ -877,13 +892,13 @@
                     const lastDay = new Date(year, month + 1, 0);
 
                     const days = [];
-                    const todayStr = new Date().toISOString().split('T')[0];
+                    const todayStr = getLocalDateStr();
 
                     // Padding previous month days
                     const startDayOfWeek = firstDay.getDay();
                     for (let i = startDayOfWeek - 1; i >= 0; i--) {
                         const d = new Date(year, month, -i);
-                        const dateStr = d.toISOString().split('T')[0];
+                        const dateStr = formatYMD(d.getFullYear(), d.getMonth() + 1, d.getDate());
                         days.push({
                             dateStr,
                             dayNum: d.getDate(),
@@ -896,8 +911,7 @@
 
                     // Current month days
                     for (let i = 1; i <= lastDay.getDate(); i++) {
-                        const d = new Date(year, month, i);
-                        const dateStr = d.toISOString().split('T')[0];
+                        const dateStr = formatYMD(year, month + 1, i);
                         days.push({
                             dateStr,
                             dayNum: i,
@@ -931,7 +945,7 @@
 
                 // Copy functionality (Rule 4)
                 const openCopyModal = () => {
-                    targetCopyDate.value = new Date().toISOString().split('T')[0];
+                    targetCopyDate.value = getLocalDateStr();
                     showCopyModal.value = true;
                 };
 
@@ -992,7 +1006,7 @@
                     const url = URL.createObjectURL(blob);
                     const link = document.createElement("a");
                     link.setAttribute("href", url);
-                    link.setAttribute("download", `FitLog_Export_${new Date().toISOString().split('T')[0]}.csv`);
+                    link.setAttribute("download", `FitLog_Export_${getLocalDateStr()}.csv`);
                     document.body.appendChild(link);
                     link.click();
                     document.body.removeChild(link);
