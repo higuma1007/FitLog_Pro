@@ -81,7 +81,7 @@
                 </div>
                 <div>
                     <h1 class="font-bold text-lg leading-none bg-gradient-to-r from-emerald-400 to-green-300 bg-clip-text text-transparent">FitLog Pro</h1>
-                    <span class="text-[10px] text-slate-400">爆速ジムログ＆マシン設定メモ</span>
+                    <span class="text-[10px] text-slate-400">ジム・有酸素・プール記録＆マシン設定メモ</span>
                 </div>
             </div>
 
@@ -125,7 +125,7 @@
                             <i class="fa-solid fa-plus-circle text-emerald-400"></i>
                             種目を選択・追加
                         </h2>
-                        <span class="text-xs text-slate-400">自動で前回の重量が反映されます</span>
+                        <span class="text-xs text-slate-400">自動で前回の記録が反映されます</span>
                     </div>
 
                     <!-- Category Selector Pills -->
@@ -135,10 +135,10 @@
                             :key="cat.id"
                             @click="selectedCategory = cat.id"
                             :class="[
-                                'px-3 py-1.5 rounded-xl transition whitespace-nowrap font-medium flex items-center gap-1',
+                                'px-3 py-1.5 rounded-xl transition whitespace-nowrap font-medium flex items-center gap-1.5',
                                 selectedCategory === cat.id ? 'bg-emerald-600 text-white shadow-md shadow-emerald-900/40' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
                             ]">
-                            <span>{{ cat.icon }}</span>
+                            <i :class="cat.icon"></i>
                             <span>{{ cat.name }}</span>
                         </button>
                     </div>
@@ -149,16 +149,24 @@
                             <select v-model="currentExerciseName" @change="onExerciseSelect" class="w-full bg-slate-900 border border-slate-700 text-slate-100 rounded-xl py-3 px-3 appearance-none focus:outline-none focus:border-emerald-500 font-semibold text-sm">
                                 <option value="" disabled>-- 種目を選択してください --</option>
                                 <option v-for="ex in filteredExerciseMaster" :key="ex.id" :value="ex.name">
-                                    [{{ ex.category }}] {{ ex.name }}
+                                    [{{ ex.category }}] {{ ex.name }} ({{ getUnitTypeLabel(ex.unitType) }})
                                 </option>
                             </select>
                             <i class="fa-solid fa-chevron-down absolute right-3 top-3.5 text-slate-400 pointer-events-none text-xs"></i>
                         </div>
 
                         <!-- Or Custom Exercise Input -->
-                        <div class="flex gap-2">
-                            <input type="text" v-model="customExerciseInput" placeholder="一覧にない新規種目を入力..." class="flex-1 bg-slate-900 border border-slate-700 text-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-500">
-                            <button @click="addCustomExercise" class="bg-slate-700 hover:bg-slate-600 text-xs px-3 py-2 rounded-xl text-slate-200 transition font-medium">
+                        <div class="flex gap-2 flex-wrap sm:flex-nowrap">
+                            <input type="text" v-model="customExerciseInput" placeholder="一覧にない新規種目を入力..." class="flex-1 bg-slate-900 border border-slate-700 text-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-500 min-w-[140px]">
+                            
+                            <select v-model="customExerciseUnitType" class="bg-slate-900 border border-slate-700 text-slate-300 rounded-xl px-2 py-2 text-xs focus:outline-none focus:border-emerald-500">
+                                <option value="weight_reps">重量(kg) × 回数</option>
+                                <option value="distance_time">距離(km) × 時間(分)</option>
+                                <option value="swim">往復/本数 × 時間(分)</option>
+                                <option value="time">時間(分)のみ</option>
+                            </select>
+
+                            <button @click="addCustomExercise" class="bg-slate-700 hover:bg-slate-600 text-xs px-3 py-2 rounded-xl text-slate-200 transition font-medium whitespace-nowrap">
                                 マスタ登録
                             </button>
                         </div>
@@ -169,7 +177,7 @@
                         <div class="flex justify-between items-center text-amber-400 font-semibold">
                             <span class="flex items-center gap-1.5">
                                 <i class="fa-solid fa-sliders text-amber-400"></i>
-                                マシン/シート設定メモ
+                                マシン/コース/セッティングメモ
                             </span>
                             <button @click="isEditingMachineNote = !isEditingMachineNote" class="text-slate-400 hover:text-white underline">
                                 {{ isEditingMachineNote ? '完了' : '編集' }}
@@ -177,56 +185,147 @@
                         </div>
 
                         <div v-if="!isEditingMachineNote" class="text-slate-300 bg-slate-950/60 p-2 rounded-lg border border-slate-800/80 min-h-[32px] flex items-center">
-                            {{ currentExerciseMaster.settingsNote || 'シート高さやピン位置メモは未登録です。' }}
+                            {{ currentExerciseMaster.settingsNote || 'シート高さ、速度・傾斜、コース設定メモは未登録です。' }}
                         </div>
                         <div v-else class="space-y-1">
-                            <textarea v-model="currentExerciseMaster.settingsNote" @change="saveMasterData" placeholder="例：シート高さ 4 / ピン位置 上から3番目" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-200 focus:outline-none text-xs" rows="2"></textarea>
+                            <textarea v-model="currentExerciseMaster.settingsNote" @change="saveMasterData" placeholder="例：シート高さ 4 / トレッドミル傾斜 2.0% / レーン4" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-slate-200 focus:outline-none text-xs" rows="2"></textarea>
                         </div>
                     </div>
 
                     <!-- Exercise Entry Form (Rule 1, 7, 10 - Quick Increment & Previous Copy) -->
                     <div v-if="activeWorkingExercise" class="bg-slate-900 rounded-xl p-3 border border-emerald-500/30 space-y-3">
-                        <div class="flex justify-between items-center border-b border-slate-800 pb-2">
-                            <span class="font-bold text-emerald-400 text-sm flex items-center gap-1.5">
-                                <i class="fa-solid fa-pen-to-square"></i>
-                                {{ activeWorkingExercise.name }} の入力
-                            </span>
-                            <span v-if="hasPreviousRecord" class="text-[11px] text-amber-400 bg-amber-950/60 border border-amber-800/50 px-2 py-0.5 rounded-full">
+                        <div class="flex flex-wrap justify-between items-center border-b border-slate-800 pb-2 gap-2">
+                            <div class="flex items-center gap-1.5">
+                                <span class="font-bold text-emerald-400 text-sm flex items-center gap-1.5">
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                    {{ activeWorkingExercise.name }}
+                                </span>
+                                <span class="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded border border-slate-700 font-mono">
+                                    {{ getUnitTypeLabel(activeWorkingExercise.unitType) }}
+                                </span>
+                            </div>
+
+                            <span v-if="hasPreviousRecord" class="text-[11px] text-amber-400 bg-amber-950/60 border border-amber-800/50 px-2 py-0.5 rounded-full font-medium">
                                 前回: {{ previousRecordSummary }}
                             </span>
                         </div>
 
-                        <!-- Quick Increment Bar (+1kg, +2.5kg, +5kg) -->
-                        <div class="space-y-1">
-                            <label class="text-[11px] text-slate-400 font-medium">重量のクイック調整 (1セット目に適用)</label>
-                            <div class="grid grid-cols-5 gap-1.5">
-                                <button @click="adjustWeight(-2.5)" class="bg-slate-800 hover:bg-slate-700 text-slate-300 py-1.5 rounded-lg text-xs font-bold active:scale-95 transition border border-slate-700">-2.5kg</button>
-                                <button @click="adjustWeight(-1)" class="bg-slate-800 hover:bg-slate-700 text-slate-300 py-1.5 rounded-lg text-xs font-bold active:scale-95 transition border border-slate-700">-1kg</button>
-                                <button @click="adjustWeight(1)" class="bg-emerald-950 hover:bg-emerald-900 text-emerald-300 py-1.5 rounded-lg text-xs font-bold active:scale-95 transition border border-emerald-800/60">+1kg</button>
-                                <button @click="adjustWeight(2.5)" class="bg-emerald-950 hover:bg-emerald-900 text-emerald-300 py-1.5 rounded-lg text-xs font-bold active:scale-95 transition border border-emerald-800/60">+2.5kg</button>
-                                <button @click="adjustWeight(5)" class="bg-emerald-950 hover:bg-emerald-900 text-emerald-300 py-1.5 rounded-lg text-xs font-bold active:scale-95 transition border border-emerald-800/60">+5kg</button>
+                        <!-- Unit Type Switcher inside Form (In case user wants to change on the fly) -->
+                        <div class="flex items-center gap-2 text-xs">
+                            <span class="text-[11px] text-slate-400">記録形式:</span>
+                            <div class="flex gap-1 overflow-x-auto text-[11px]">
+                                <button type="button" @click="changeActiveUnitType('weight_reps')" :class="['px-2 py-1 rounded-lg border transition', activeWorkingExercise.unitType === 'weight_reps' ? 'bg-emerald-900/60 text-emerald-300 border-emerald-500' : 'bg-slate-950 text-slate-400 border-slate-800']">重量×回数</button>
+                                <button type="button" @click="changeActiveUnitType('distance_time')" :class="['px-2 py-1 rounded-lg border transition', activeWorkingExercise.unitType === 'distance_time' ? 'bg-emerald-900/60 text-emerald-300 border-emerald-500' : 'bg-slate-950 text-slate-400 border-slate-800']">距離×時間</button>
+                                <button type="button" @click="changeActiveUnitType('swim')" :class="['px-2 py-1 rounded-lg border transition', activeWorkingExercise.unitType === 'swim' ? 'bg-emerald-900/60 text-emerald-300 border-emerald-500' : 'bg-slate-950 text-slate-400 border-slate-800']">プール(本/往復×時間)</button>
+                                <button type="button" @click="changeActiveUnitType('time')" :class="['px-2 py-1 rounded-lg border transition', activeWorkingExercise.unitType === 'time' ? 'bg-emerald-900/60 text-emerald-300 border-emerald-500' : 'bg-slate-950 text-slate-400 border-slate-800']">時間のみ</button>
                             </div>
                         </div>
 
-                        <!-- Sets Input Table -->
+                        <!-- Quick Increment Bar (Adaptive based on Unit Type) -->
+                        <div class="space-y-1">
+                            <label class="text-[11px] text-slate-400 font-medium flex items-center justify-between">
+                                <span>クイック微調整ボタン</span>
+                                <span class="text-[10px] text-slate-500">ワンタップで加算/減算</span>
+                            </label>
+
+                            <!-- 1. For Weight/Reps -->
+                            <div v-if="activeWorkingExercise.unitType === 'weight_reps'" class="grid grid-cols-5 gap-1.5">
+                                <button @click="adjustPrimaryValue(-2.5)" class="bg-slate-800 hover:bg-slate-700 text-slate-300 py-1.5 rounded-lg text-xs font-bold active:scale-95 transition border border-slate-700">-2.5kg</button>
+                                <button @click="adjustPrimaryValue(-1)" class="bg-slate-800 hover:bg-slate-700 text-slate-300 py-1.5 rounded-lg text-xs font-bold active:scale-95 transition border border-slate-700">-1kg</button>
+                                <button @click="adjustPrimaryValue(1)" class="bg-emerald-950 hover:bg-emerald-900 text-emerald-300 py-1.5 rounded-lg text-xs font-bold active:scale-95 transition border border-emerald-800/60">+1kg</button>
+                                <button @click="adjustPrimaryValue(2.5)" class="bg-emerald-950 hover:bg-emerald-900 text-emerald-300 py-1.5 rounded-lg text-xs font-bold active:scale-95 transition border border-emerald-800/60">+2.5kg</button>
+                                <button @click="adjustPrimaryValue(5)" class="bg-emerald-950 hover:bg-emerald-900 text-emerald-300 py-1.5 rounded-lg text-xs font-bold active:scale-95 transition border border-emerald-800/60">+5kg</button>
+                            </div>
+
+                            <!-- 2. For Distance/Time (Run/Walk) -->
+                            <div v-else-if="activeWorkingExercise.unitType === 'distance_time'" class="grid grid-cols-5 gap-1.5">
+                                <button @click="adjustPrimaryValue(-0.5)" class="bg-slate-800 hover:bg-slate-700 text-slate-300 py-1.5 rounded-lg text-xs font-bold active:scale-95 transition border border-slate-700">-0.5km</button>
+                                <button @click="adjustPrimaryValue(0.5)" class="bg-emerald-950 hover:bg-emerald-900 text-emerald-300 py-1.5 rounded-lg text-xs font-bold active:scale-95 transition border border-emerald-800/60">+0.5km</button>
+                                <button @click="adjustPrimaryValue(1.0)" class="bg-emerald-950 hover:bg-emerald-900 text-emerald-300 py-1.5 rounded-lg text-xs font-bold active:scale-95 transition border border-emerald-800/60">+1.0km</button>
+                                <button @click="adjustSecondaryValue(5)" class="bg-sky-950 hover:bg-sky-900 text-sky-300 py-1.5 rounded-lg text-xs font-bold active:scale-95 transition border border-sky-800/60">+5分</button>
+                                <button @click="adjustSecondaryValue(10)" class="bg-sky-950 hover:bg-sky-900 text-sky-300 py-1.5 rounded-lg text-xs font-bold active:scale-95 transition border border-sky-800/60">+10分</button>
+                            </div>
+
+                            <!-- 3. For Swim (Pool) -->
+                            <div v-else-if="activeWorkingExercise.unitType === 'swim'" class="grid grid-cols-5 gap-1.5">
+                                <button @click="adjustPrimaryValue(-2)" class="bg-slate-800 hover:bg-slate-700 text-slate-300 py-1.5 rounded-lg text-xs font-bold active:scale-95 transition border border-slate-700">-2往復</button>
+                                <button @click="adjustPrimaryValue(1)" class="bg-cyan-950 hover:bg-cyan-900 text-cyan-300 py-1.5 rounded-lg text-xs font-bold active:scale-95 transition border border-cyan-800/60">+1本(25m)</button>
+                                <button @click="adjustPrimaryValue(2)" class="bg-cyan-950 hover:bg-cyan-900 text-cyan-300 py-1.5 rounded-lg text-xs font-bold active:scale-95 transition border border-cyan-800/60">+1往復(50m)</button>
+                                <button @click="adjustPrimaryValue(4)" class="bg-cyan-950 hover:bg-cyan-900 text-cyan-300 py-1.5 rounded-lg text-xs font-bold active:scale-95 transition border border-cyan-800/60">+2往復(100m)</button>
+                                <button @click="adjustSecondaryValue(5)" class="bg-sky-950 hover:bg-sky-900 text-sky-300 py-1.5 rounded-lg text-xs font-bold active:scale-95 transition border border-sky-800/60">+5分</button>
+                            </div>
+
+                            <!-- 4. For Time only -->
+                            <div v-else class="grid grid-cols-4 gap-1.5">
+                                <button @click="adjustPrimaryValue(-5)" class="bg-slate-800 hover:bg-slate-700 text-slate-300 py-1.5 rounded-lg text-xs font-bold active:scale-95 transition border border-slate-700">-5分</button>
+                                <button @click="adjustPrimaryValue(5)" class="bg-emerald-950 hover:bg-emerald-900 text-emerald-300 py-1.5 rounded-lg text-xs font-bold active:scale-95 transition border border-emerald-800/60">+5分</button>
+                                <button @click="adjustPrimaryValue(10)" class="bg-emerald-950 hover:bg-emerald-900 text-emerald-300 py-1.5 rounded-lg text-xs font-bold active:scale-95 transition border border-emerald-800/60">+10分</button>
+                                <button @click="adjustPrimaryValue(15)" class="bg-emerald-950 hover:bg-emerald-900 text-emerald-300 py-1.5 rounded-lg text-xs font-bold active:scale-95 transition border border-emerald-800/60">+15分</button>
+                            </div>
+                        </div>
+
+                        <!-- Sets Input Table with Dynamic Headers -->
                         <div class="space-y-2">
-                            <div class="grid grid-cols-12 gap-2 text-[11px] text-slate-400 font-semibold px-1 text-center">
+                            <div class="grid grid-cols-12 gap-2 text-[11px] text-slate-400 font-semibold px-1 text-center items-center">
                                 <span class="col-span-2">セット</span>
-                                <span class="col-span-4">負荷 (kg)</span>
-                                <span class="col-span-4">回数 (reps)</span>
+                                
+                                <template v-if="activeWorkingExercise.unitType === 'weight_reps'">
+                                    <span class="col-span-4">負荷 (kg)</span>
+                                    <span class="col-span-4">回数 (reps)</span>
+                                </template>
+                                <template v-else-if="activeWorkingExercise.unitType === 'distance_time'">
+                                    <span class="col-span-4">距離 (km)</span>
+                                    <span class="col-span-4">時間 (分)</span>
+                                </template>
+                                <template v-else-if="activeWorkingExercise.unitType === 'swim'">
+                                    <span class="col-span-4">本数/往復 (25m/50m)</span>
+                                    <span class="col-span-4">時間 (分)</span>
+                                </template>
+                                <template v-else>
+                                    <span class="col-span-8">実施時間 (分)</span>
+                                </template>
+
                                 <span class="col-span-2">削除</span>
                             </div>
 
                             <div v-for="(set, sIdx) in activeWorkingExercise.sets" :key="sIdx" class="grid grid-cols-12 gap-2 items-center">
-                                <span class="col-span-2 text-center text-xs font-bold text-slate-400 bg-slate-800 py-2 rounded-lg">
+                                <span class="col-span-2 text-center text-xs font-bold text-slate-400 bg-slate-800 py-2 rounded-lg font-mono">
                                     #{{ sIdx + 1 }}
                                 </span>
-                                <div class="col-span-4 relative">
-                                    <input type="number" step="0.5" v-model.number="set.weight" class="w-full bg-slate-950 border border-slate-700 text-center font-bold text-slate-100 rounded-lg py-2 text-sm focus:outline-none focus:border-emerald-500">
-                                </div>
-                                <div class="col-span-4 relative">
-                                    <input type="number" v-model.number="set.reps" class="w-full bg-slate-950 border border-slate-700 text-center font-bold text-slate-100 rounded-lg py-2 text-sm focus:outline-none focus:border-emerald-500">
-                                </div>
+
+                                <template v-if="activeWorkingExercise.unitType === 'weight_reps'">
+                                    <div class="col-span-4 relative">
+                                        <input type="number" step="0.5" v-model.number="set.val1" class="w-full bg-slate-950 border border-slate-700 text-center font-bold text-slate-100 rounded-lg py-2 text-sm focus:outline-none focus:border-emerald-500">
+                                    </div>
+                                    <div class="col-span-4 relative">
+                                        <input type="number" step="1" v-model.number="set.val2" class="w-full bg-slate-950 border border-slate-700 text-center font-bold text-slate-100 rounded-lg py-2 text-sm focus:outline-none focus:border-emerald-500">
+                                    </div>
+                                </template>
+
+                                <template v-else-if="activeWorkingExercise.unitType === 'distance_time'">
+                                    <div class="col-span-4 relative">
+                                        <input type="number" step="0.1" v-model.number="set.val1" placeholder="km" class="w-full bg-slate-950 border border-slate-700 text-center font-bold text-slate-100 rounded-lg py-2 text-sm focus:outline-none focus:border-emerald-500">
+                                    </div>
+                                    <div class="col-span-4 relative">
+                                        <input type="number" step="1" v-model.number="set.val2" placeholder="分" class="w-full bg-slate-950 border border-slate-700 text-center font-bold text-slate-100 rounded-lg py-2 text-sm focus:outline-none focus:border-emerald-500">
+                                    </div>
+                                </template>
+
+                                <template v-else-if="activeWorkingExercise.unitType === 'swim'">
+                                    <div class="col-span-4 relative">
+                                        <input type="number" step="1" v-model.number="set.val1" placeholder="本/往復" class="w-full bg-slate-950 border border-slate-700 text-center font-bold text-slate-100 rounded-lg py-2 text-sm focus:outline-none focus:border-emerald-500">
+                                    </div>
+                                    <div class="col-span-4 relative">
+                                        <input type="number" step="1" v-model.number="set.val2" placeholder="分" class="w-full bg-slate-950 border border-slate-700 text-center font-bold text-slate-100 rounded-lg py-2 text-sm focus:outline-none focus:border-emerald-500">
+                                    </div>
+                                </template>
+
+                                <template v-else>
+                                    <div class="col-span-8 relative">
+                                        <input type="number" step="1" v-model.number="set.val1" placeholder="分" class="w-full bg-slate-950 border border-slate-700 text-center font-bold text-slate-100 rounded-lg py-2 text-sm focus:outline-none focus:border-emerald-500">
+                                    </div>
+                                </template>
+
                                 <div class="col-span-2 text-center">
                                     <button @click="removeSet(sIdx)" class="text-slate-500 hover:text-rose-400 p-2 transition">
                                         <i class="fa-solid fa-trash-can text-sm"></i>
@@ -248,7 +347,7 @@
                         </div>
 
                         <!-- Exercise Memo -->
-                        <input type="text" v-model="activeWorkingExercise.note" placeholder="この種目のメモ (例: フォーム意識、最後ドロップセット)" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-emerald-500">
+                        <input type="text" v-model="activeWorkingExercise.note" placeholder="この種目のメモ (例: ペース維持、クロール中心、心拍数130目安)" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-emerald-500">
 
                         <!-- Confirm Add to Today's Log -->
                         <button @click="saveExerciseToDailyLog" class="w-full bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-500 hover:to-green-400 text-white font-bold py-3 rounded-xl shadow-lg shadow-emerald-900/30 active:scale-98 transition flex items-center justify-center gap-2 text-sm">
@@ -277,7 +376,7 @@
                         <div v-for="(ex, index) in currentDailyLog.exercises" :key="index" class="bg-slate-900 border border-slate-800 rounded-xl p-3 space-y-2">
                             <div class="flex justify-between items-start">
                                 <div>
-                                    <div class="flex items-center gap-2">
+                                    <div class="flex items-center gap-2 flex-wrap">
                                         <span class="text-xs bg-slate-800 text-emerald-400 font-bold px-2 py-0.5 rounded-md border border-slate-700">
                                             {{ ex.category }}
                                         </span>
@@ -298,13 +397,11 @@
                                 </div>
                             </div>
 
-                            <!-- Sets summary tags -->
+                            <!-- Sets summary tags (Smart Formatted based on unitType) -->
                             <div class="flex flex-wrap gap-1.5 pt-1">
                                 <div v-for="(s, sI) in ex.sets" :key="sI" class="bg-slate-950 border border-slate-800 px-2.5 py-1 rounded-lg text-xs font-mono font-medium text-slate-300">
                                     <span class="text-slate-500 mr-1">#{{ sI + 1 }}</span>
-                                    <span class="text-emerald-400 font-bold">{{ s.weight }}</span><span class="text-slate-400 text-[10px]">kg</span> 
-                                    <span class="text-slate-500 mx-0.5">×</span> 
-                                    <span class="text-amber-400 font-bold">{{ s.reps }}</span><span class="text-slate-400 text-[10px]">回</span>
+                                    <span v-html="formatSetDisplay(ex.unitType, s)"></span>
                                 </div>
                             </div>
                         </div>
@@ -315,7 +412,7 @@
                                 <i class="fa-solid fa-sticky-note text-amber-400"></i>
                                 本日の全体メモ・コンディション
                             </label>
-                            <textarea v-model="currentDailyLog.memo" @change="saveLogsToStorage" placeholder="例：体が軽かった、水分補給1.5L、プロテイン摂取" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500" rows="2"></textarea>
+                            <textarea v-model="currentDailyLog.memo" @change="saveLogsToStorage" placeholder="例：体が軽かった、ランニング後のプロテイン摂取、水分補給1.5L" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500" rows="2"></textarea>
                         </div>
                     </div>
                 </div>
@@ -400,8 +497,8 @@
                                 <span class="font-bold text-slate-200">{{ ex.name }}</span>
                                 <span class="text-[10px] text-emerald-400 ml-2 bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">{{ ex.category }}</span>
                             </div>
-                            <div class="text-slate-400 font-mono">
-                                {{ ex.sets.length }}セット (最大 {{ getMaxWeight(ex) }}kg)
+                            <div class="text-slate-300 font-mono text-right text-[11px]">
+                                {{ getExerciseSummaryText(ex) }}
                             </div>
                         </div>
                         <p v-if="currentDailyLog.memo" class="text-xs text-amber-300/80 bg-slate-900/80 p-2 rounded-xl border border-slate-800">
@@ -418,9 +515,9 @@
                         <div>
                             <h2 class="font-bold text-slate-100 text-sm flex items-center gap-2">
                                 <i class="fa-solid fa-sliders text-amber-400"></i>
-                                マシン・シート設定メモ一覧
+                                種目・マシン設定メモ一覧
                             </h2>
-                            <p class="text-xs text-slate-400 mt-0.5">ジムで迷わないためのシート高・ピン位置・フォームメモ</p>
+                            <p class="text-xs text-slate-400 mt-0.5">シート高・ピン位置・トレッドミル傾斜・プール設定メモ</p>
                         </div>
                     </div>
 
@@ -436,11 +533,14 @@
                     <div class="space-y-3">
                         <div v-for="m in filteredMasterList" :key="m.id" class="bg-slate-900 border border-slate-800 rounded-xl p-3 space-y-2">
                             <div class="flex justify-between items-center">
-                                <div class="flex items-center gap-2">
+                                <div class="flex items-center gap-2 flex-wrap">
                                     <span class="text-[10px] bg-slate-800 text-emerald-400 px-2 py-0.5 rounded font-bold border border-slate-700">
                                         {{ m.category }}
                                     </span>
                                     <span class="font-bold text-slate-100 text-sm">{{ m.name }}</span>
+                                    <span class="text-[10px] bg-slate-950 text-slate-400 px-1.5 py-0.5 rounded border border-slate-800 font-mono">
+                                        {{ getUnitTypeLabel(m.unitType) }}
+                                    </span>
                                 </div>
                                 <button @click="deleteMasterItem(m.id)" class="text-slate-500 hover:text-rose-400 text-xs transition">
                                     <i class="fa-solid fa-trash"></i>
@@ -449,8 +549,8 @@
 
                             <!-- Settings Note Input Area -->
                             <div class="space-y-1">
-                                <label class="text-[10px] text-slate-400">シートの高さ・目盛りメモ</label>
-                                <textarea v-model="m.settingsNote" @change="saveMasterData" placeholder="例：シート高さ 3, 足置き位置 2, ピン 40kg" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-amber-500" rows="2"></textarea>
+                                <label class="text-[10px] text-slate-400">セッティング・目盛りメモ</label>
+                                <textarea v-model="m.settingsNote" @change="saveMasterData" placeholder="例：シート高さ 3, 傾斜2.0%, 息継ぎ左右交互" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-amber-500" rows="2"></textarea>
                             </div>
                         </div>
                     </div>
@@ -466,12 +566,12 @@
                         <span class="text-2xl font-black text-emerald-400">{{ totalWorkoutDays }} <span class="text-xs text-slate-400">日</span></span>
                     </div>
                     <div class="bg-cardbg border border-borderbg p-3.5 rounded-2xl shadow-md">
-                        <span class="text-xs text-slate-400 block font-medium">総挙上重量 (推定)</span>
+                        <span class="text-xs text-slate-400 block font-medium">筋トレ総挙上重量</span>
                         <span class="text-2xl font-black text-amber-400">{{ totalLiftedWeight.toLocaleString() }} <span class="text-xs text-slate-400">kg</span></span>
                     </div>
                     <div class="bg-cardbg border border-borderbg p-3.5 rounded-2xl shadow-md col-span-2 md:col-span-1">
-                        <span class="text-xs text-slate-400 block font-medium">記録済み種目数</span>
-                        <span class="text-2xl font-black text-sky-400">{{ exerciseMaster.length }} <span class="text-xs text-slate-400">種目</span></span>
+                        <span class="text-xs text-slate-400 block font-medium">有酸素/走行 累計</span>
+                        <span class="text-2xl font-black text-sky-400">{{ totalCardioDistance.toFixed(1) }} <span class="text-xs text-slate-400">km</span></span>
                     </div>
                 </div>
 
@@ -479,7 +579,7 @@
                 <div class="bg-cardbg rounded-2xl p-4 border border-borderbg space-y-3 shadow-md">
                     <h3 class="font-bold text-slate-100 text-sm flex items-center gap-2">
                         <i class="fa-solid fa-chart-pie text-emerald-400"></i>
-                        部位別トレーニング割合
+                        部位・ジャンル別トレーニング割合
                     </h3>
                     <div class="h-56 relative flex items-center justify-center">
                         <canvas id="categoryChart"></canvas>
@@ -494,7 +594,7 @@
                     </h3>
                     
                     <p class="text-xs text-slate-400 leading-relaxed">
-                        PCのExcelで統計分析したり、他の端末へ引き継ぐためのCSV入出力機能です。
+                        PCのExcelで統計分析したり、他の端末へ引き継ぐためのCSV入出力機能です。筋トレ・有酸素・プールの全データを一括管理できます。
                     </p>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
@@ -596,6 +696,7 @@
                 const selectedCategory = ref('胸');
                 const currentExerciseName = ref('');
                 const customExerciseInput = ref('');
+                const customExerciseUnitType = ref('weight_reps');
                 const isEditingMachineNote = ref(false);
                 const machineCategoryFilter = ref('ALL');
 
@@ -609,26 +710,33 @@
 
                 // Default Preset Categories (Rule 1)
                 const categories = [
-                    { id: '胸', name: '胸', icon: '胸' },
-                    { id: '背中', name: '背中', icon: '背' },
-                    { id: '腕', name: '腕', icon: '腕' },
-                    { id: '腹', name: '腹', icon: '腹' },
-                    { id: '脚', name: '脚', icon: '脚' },
-                    { id: '肩', name: '肩', icon: '肩' },
-                    { id: '自由/有酸素', name: '自由/有酸素', icon: '走' },
+                    { id: '胸', name: '胸', icon: 'fa-solid fa-shield-halved' },
+                    { id: '背中', name: '背中', icon: 'fa-solid fa-child-reaching' },
+                    { id: '腕', name: '腕', icon: 'fa-solid fa-hand-back-fist' },
+                    { id: '腹', name: '腹', icon: 'fa-solid fa-bullseye' },
+                    { id: '脚', name: '脚', icon: 'fa-solid fa-person-walking' },
+                    { id: '肩', name: '肩', icon: 'fa-solid fa-arrows-up-down-left-right' },
+                    { id: '自由/有酸素', name: '自由/有酸素', icon: 'fa-solid fa-person-running' },
                 ];
 
-                // Initial Preset Exercises Master Data (Rule 9)
+                // Initial Preset Exercises Master Data with unitTypes (Rule 9 & Updated Request)
+                // unitType: 'weight_reps' (kg × 回) | 'distance_time' (km × 分) | 'swim' (往復/本 × 分) | 'time' (分のみ)
                 const defaultMaster = [
-                    { id: '1', name: 'チェストプレス', category: '胸', settingsNote: 'シート高さ: 3, グリップ位置: パラレル', defaultWeight: 30, defaultReps: 10 },
-                    { id: '2', name: 'ペックフライ', category: '胸', settingsNote: 'シート高さ: 2, アーム開き: 3番目', defaultWeight: 25, defaultReps: 12 },
-                    { id: '3', name: 'ラットプルダウン', category: '背中', settingsNote: '太もも固定パット: 上から2番目', defaultWeight: 35, defaultReps: 10 },
-                    { id: '4', name: 'シーテッドロー', category: '背中', settingsNote: 'チェストパット位置: 4', defaultWeight: 30, defaultReps: 10 },
-                    { id: '5', name: 'アブドミナルクランチ', category: '腹', settingsNote: '足の高さ: 2', defaultWeight: 25, defaultReps: 15 },
-                    { id: '6', name: 'レッグプレス', category: '脚', settingsNote: '背もたれ角度: 3番目', defaultWeight: 60, defaultReps: 10 },
-                    { id: '7', name: 'レッグエクステンション', category: '脚', settingsNote: '足首パット: 2, 背もたれ: 4', defaultWeight: 25, defaultReps: 12 },
-                    { id: '8', name: 'アームカール (ダンベル)', category: '腕', settingsNote: 'ベンチ角度: インクライン 60度', defaultWeight: 10, defaultReps: 10 },
-                    { id: '9', name: 'トレッドミル (ランニング)', category: '自由/有酸素', settingsNote: '傾斜: 2.0%, 速度 8.5km/h', defaultWeight: 0, defaultReps: 20 },
+                    { id: '1', name: 'チェストプレス', category: '胸', unitType: 'weight_reps', settingsNote: 'シート高さ: 3, グリップ位置: パラレル', defaultVal1: 30, defaultVal2: 10 },
+                    { id: '2', name: 'ペックフライ', category: '胸', unitType: 'weight_reps', settingsNote: 'シート高さ: 2, アーム開き: 3番目', defaultVal1: 25, defaultVal2: 12 },
+                    { id: '3', name: 'ラットプルダウン', category: '背中', unitType: 'weight_reps', settingsNote: '太もも固定パット: 上から2番目', defaultVal1: 35, defaultVal2: 10 },
+                    { id: '4', name: 'シーテッドロー', category: '背中', unitType: 'weight_reps', settingsNote: 'チェストパット位置: 4', defaultVal1: 30, defaultVal2: 10 },
+                    { id: '5', name: 'アブドミナルクランチ', category: '腹', unitType: 'weight_reps', settingsNote: '足の高さ: 2', defaultVal1: 25, defaultVal2: 15 },
+                    { id: '6', name: 'レッグプレス', category: '脚', unitType: 'weight_reps', settingsNote: '背もたれ角度: 3番目', defaultVal1: 60, defaultVal2: 10 },
+                    { id: '7', name: 'レッグエクステンション', category: '脚', unitType: 'weight_reps', settingsNote: '足首パット: 2, 背もたれ: 4', defaultVal1: 25, defaultVal2: 12 },
+                    { id: '8', name: 'アームカール (ダンベル)', category: '腕', unitType: 'weight_reps', settingsNote: 'ベンチ角度: インクライン 60度', defaultVal1: 10, defaultVal2: 10 },
+                    { id: '9', name: 'サイドレイズ', category: '肩', unitType: 'weight_reps', settingsNote: 'ダンベル小指側をやや高めに', defaultVal1: 6, defaultVal2: 15 },
+                    // Cardio / Free / Pool Items
+                    { id: '10', name: 'トレッドミル (ランニング)', category: '自由/有酸素', unitType: 'distance_time', settingsNote: '傾斜: 1.5%, 速度: 9.0km/h', defaultVal1: 3.0, defaultVal2: 20 },
+                    { id: '11', name: 'ウォーキング (ルームランナー)', category: '自由/有酸素', unitType: 'distance_time', settingsNote: '傾斜: 3.0%, 速度: 5.5km/h', defaultVal1: 2.0, defaultVal2: 25 },
+                    { id: '12', name: 'プール (水泳・25m往復)', category: '自由/有酸素', unitType: 'swim', settingsNote: 'レーン: 完泳コース / クロール&平泳ぎ', defaultVal1: 10, defaultVal2: 30 },
+                    { id: '13', name: 'エアロバイク', category: '自由/有酸素', unitType: 'distance_time', settingsNote: '負荷レベル: 6, サドル高さ: 4', defaultVal1: 5.0, defaultVal2: 15 },
+                    { id: '14', name: 'ストレッチ・ポール', category: '自由/有酸素', unitType: 'time', settingsNote: '肩甲骨と股関節中心にほぐす', defaultVal1: 15, defaultVal2: 0 }
                 ];
 
                 const exerciseMaster = ref([]);
@@ -639,9 +747,38 @@
                 const hasPreviousRecord = ref(false);
                 const previousRecordSummary = ref('');
 
+                // Helper: Unit Label Formatter
+                const getUnitTypeLabel = (type) => {
+                    switch (type) {
+                        case 'distance_time': return '距離(km) × 時間(分)';
+                        case 'swim': return '往復/本数 × 時間(分)';
+                        case 'time': return '時間(分)';
+                        case 'weight_reps':
+                        default: return '重量(kg) × 回数';
+                    }
+                };
+
+                // Normalize old log entries for backward compatibility (weight/reps -> val1/val2)
+                const normalizeExerciseData = (ex) => {
+                    const unitType = ex.unitType || (ex.category === '自由/有酸素' ? 'distance_time' : 'weight_reps');
+                    const sets = (ex.sets || []).map(s => {
+                        return {
+                            val1: s.val1 !== undefined ? s.val1 : (s.weight !== undefined ? s.weight : 0),
+                            val2: s.val2 !== undefined ? s.val2 : (s.reps !== undefined ? s.reps : 0)
+                        };
+                    });
+                    return {
+                        name: ex.name,
+                        category: ex.category,
+                        unitType: unitType,
+                        sets: sets,
+                        note: ex.note || ''
+                    };
+                };
+
                 // Initialize Data from localStorage
                 onMounted(() => {
-                    const savedMaster = localStorage.getItem('fitlog_master');
+                    const savedMaster = localStorage.getItem('fitlog_master_v2');
                     if (savedMaster) {
                         try { exerciseMaster.value = JSON.parse(savedMaster); } catch(e) { exerciseMaster.value = defaultMaster; }
                     } else {
@@ -649,9 +786,33 @@
                         saveMasterData();
                     }
 
-                    const savedLogs = localStorage.getItem('fitlog_logs');
+                    const savedLogs = localStorage.getItem('fitlog_logs_v2');
                     if (savedLogs) {
-                        try { logs.value = JSON.parse(savedLogs); } catch(e) { logs.value = {}; }
+                        try { 
+                            const parsed = JSON.parse(savedLogs);
+                            // Normalize existing logs
+                            Object.keys(parsed).forEach(date => {
+                                if (parsed[date] && parsed[date].exercises) {
+                                    parsed[date].exercises = parsed[date].exercises.map(normalizeExerciseData);
+                                }
+                            });
+                            logs.value = parsed;
+                        } catch(e) { logs.value = {}; }
+                    } else {
+                        // Fallback check v1 logs
+                        const oldLogs = localStorage.getItem('fitlog_logs');
+                        if (oldLogs) {
+                            try {
+                                const parsedOld = JSON.parse(oldLogs);
+                                Object.keys(parsedOld).forEach(date => {
+                                    if (parsedOld[date] && parsedOld[date].exercises) {
+                                        parsedOld[date].exercises = parsedOld[date].exercises.map(normalizeExerciseData);
+                                    }
+                                });
+                                logs.value = parsedOld;
+                                saveLogsToStorage();
+                            } catch(e) {}
+                        }
                     }
 
                     ensureDailyLogExists(selectedDate.value);
@@ -660,11 +821,11 @@
 
                 // Watchers for Persistence
                 const saveMasterData = () => {
-                    localStorage.setItem('fitlog_master', JSON.stringify(exerciseMaster.value));
+                    localStorage.setItem('fitlog_master_v2', JSON.stringify(exerciseMaster.value));
                 };
 
                 const saveLogsToStorage = () => {
-                    localStorage.setItem('fitlog_logs', JSON.stringify(logs.value));
+                    localStorage.setItem('fitlog_logs_v2', JSON.stringify(logs.value));
                 };
 
                 const ensureDailyLogExists = (dateStr) => {
@@ -685,7 +846,8 @@
 
                 const formattedSelectedDateLabel = computed(() => {
                     if (!selectedDate.value) return '';
-                    const d = new Date(selectedDate.value);
+                    const parts = selectedDate.value.split('-');
+                    const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
                     const days = ['日', '月', '火', '水', '木', '金', '土'];
                     return `${d.getMonth() + 1}月${d.getDate()}日 (${days[d.getDay()]})`;
                 });
@@ -712,9 +874,9 @@
                     Object.values(logs.value).forEach(log => {
                         if (log.exercises) {
                             log.exercises.forEach(ex => {
-                                if (ex.sets) {
+                                if (ex.unitType === 'weight_reps' && ex.sets) {
                                     ex.sets.forEach(s => {
-                                        sum += (s.weight || 0) * (s.reps || 0);
+                                        sum += (s.val1 || 0) * (s.val2 || 0);
                                     });
                                 }
                             });
@@ -723,12 +885,73 @@
                     return sum;
                 });
 
-                // Exercise Selection Trigger -> Auto-fill Previous Weight & Sets (Rule 7)
+                const totalCardioDistance = computed(() => {
+                    let sum = 0;
+                    Object.values(logs.value).forEach(log => {
+                        if (log.exercises) {
+                            log.exercises.forEach(ex => {
+                                if (ex.unitType === 'distance_time' && ex.sets) {
+                                    ex.sets.forEach(s => {
+                                        sum += (s.val1 || 0);
+                                    });
+                                }
+                            });
+                        }
+                    });
+                    return sum;
+                });
+
+                // Display Format Helpers for Sets
+                const formatSetDisplay = (unitType, s) => {
+                    const v1 = s.val1 || 0;
+                    const v2 = s.val2 || 0;
+                    switch (unitType) {
+                        case 'distance_time':
+                            return `<span class="text-emerald-400 font-bold">${v1}</span><span class="text-slate-400 text-[10px]">km</span> <span class="text-slate-500">/</span> <span class="text-sky-400 font-bold">${v2}</span><span class="text-slate-400 text-[10px]">分</span>`;
+                        case 'swim':
+                            return `<span class="text-cyan-400 font-bold">${v1}</span><span class="text-slate-400 text-[10px]">往復/本</span> <span class="text-slate-500">/</span> <span class="text-sky-400 font-bold">${v2}</span><span class="text-slate-400 text-[10px]">分</span>`;
+                        case 'time':
+                            return `<span class="text-emerald-400 font-bold">${v1}</span><span class="text-slate-400 text-[10px]">分</span>`;
+                        case 'weight_reps':
+                        default:
+                            return `<span class="text-emerald-400 font-bold">${v1}</span><span class="text-slate-400 text-[10px]">kg</span> <span class="text-slate-500">×</span> <span class="text-amber-400 font-bold">${v2}</span><span class="text-slate-400 text-[10px]">回</span>`;
+                    }
+                };
+
+                const getExerciseSummaryText = (ex) => {
+                    if (!ex.sets || ex.sets.length === 0) return '記録なし';
+                    const count = ex.sets.length;
+                    const first = ex.sets[0];
+                    switch (ex.unitType) {
+                        case 'distance_time': {
+                            const totalKm = ex.sets.reduce((acc, cur) => acc + (cur.val1 || 0), 0);
+                            const totalMin = ex.sets.reduce((acc, cur) => acc + (cur.val2 || 0), 0);
+                            return `${totalKm.toFixed(1)}km / 計${totalMin}分 (${count}セット)`;
+                        }
+                        case 'swim': {
+                            const totalLaps = ex.sets.reduce((acc, cur) => acc + (cur.val1 || 0), 0);
+                            const totalMin = ex.sets.reduce((acc, cur) => acc + (cur.val2 || 0), 0);
+                            return `計${totalLaps}往復 / 計${totalMin}分 (${count}セット)`;
+                        }
+                        case 'time': {
+                            const totalMin = ex.sets.reduce((acc, cur) => acc + (cur.val1 || 0), 0);
+                            return `計 ${totalMin}分`;
+                        }
+                        case 'weight_reps':
+                        default: {
+                            const maxW = Math.max(...ex.sets.map(s => s.val1 || 0));
+                            return `${count}セット (最大 ${maxW}kg)`;
+                        }
+                    }
+                };
+
+                // Exercise Selection Trigger -> Auto-fill Previous Data (Rule 7)
                 const onExerciseSelect = () => {
                     if (!currentExerciseName.value) return;
 
                     const exName = currentExerciseName.value;
                     const masterEx = exerciseMaster.value.find(m => m.name === exName);
+                    const unitType = masterEx ? masterEx.unitType : (selectedCategory.value === '自由/有酸素' ? 'distance_time' : 'weight_reps');
 
                     // Find most recent previous log for this exercise
                     let prevSets = null;
@@ -747,47 +970,74 @@
 
                     if (prevSets) {
                         hasPreviousRecord.value = true;
-                        previousRecordSummary.value = `${prevSets[0].weight}kg × ${prevSets[0].reps}回 (${prevSets.length}セット)`;
+                        const s0 = prevSets[0];
+                        if (unitType === 'distance_time') {
+                            previousRecordSummary.value = `${s0.val1}km × ${s0.val2}分 (${prevSets.length}セット)`;
+                        } else if (unitType === 'swim') {
+                            previousRecordSummary.value = `${s0.val1}往復 × ${s0.val2}分 (${prevSets.length}セット)`;
+                        } else if (unitType === 'time') {
+                            previousRecordSummary.value = `${s0.val1}分`;
+                        } else {
+                            previousRecordSummary.value = `${s0.val1}kg × ${s0.val2}回 (${prevSets.length}セット)`;
+                        }
+
                         // Copy sets from last time
                         activeWorkingExercise.value = {
                             name: exName,
                             category: masterEx ? masterEx.category : selectedCategory.value,
-                            sets: prevSets.map(s => ({ weight: s.weight, reps: s.reps })),
+                            unitType: unitType,
+                            sets: prevSets.map(s => ({ val1: s.val1, val2: s.val2 })),
                             note: ''
                         };
                     } else {
                         hasPreviousRecord.value = false;
                         previousRecordSummary.value = '';
                         // Default initial sets
-                        const defaultW = masterEx ? masterEx.defaultWeight : 20;
-                        const defaultR = masterEx ? masterEx.defaultReps : 10;
+                        const defaultV1 = masterEx ? (masterEx.defaultVal1 ?? 20) : 20;
+                        const defaultV2 = masterEx ? (masterEx.defaultVal2 ?? 10) : 10;
+
+                        const initialSetCount = (unitType === 'time' || unitType === 'distance_time' || unitType === 'swim') ? 1 : 3;
+                        const initialSets = [];
+                        for (let i = 0; i < initialSetCount; i++) {
+                            initialSets.push({ val1: defaultV1, val2: defaultV2 });
+                        }
+
                         activeWorkingExercise.value = {
                             name: exName,
                             category: masterEx ? masterEx.category : selectedCategory.value,
-                            sets: [
-                                { weight: defaultW, reps: defaultR },
-                                { weight: defaultW, reps: defaultR },
-                                { weight: defaultW, reps: defaultR }
-                            ],
+                            unitType: unitType,
+                            sets: initialSets,
                             note: ''
                         };
                     }
                 };
 
-                // Quick Increment Weights Buttons (Rule 7)
-                const adjustWeight = (delta) => {
+                // Quick Increment Weights / Distances / Time (Rule 7 Adaptive)
+                const adjustPrimaryValue = (delta) => {
                     if (!activeWorkingExercise.value || !activeWorkingExercise.value.sets) return;
                     activeWorkingExercise.value.sets.forEach(s => {
-                        s.weight = Math.max(0, Math.round((s.weight + delta) * 10) / 10);
+                        s.val1 = Math.max(0, Math.round(((s.val1 || 0) + delta) * 10) / 10);
                     });
+                };
+
+                const adjustSecondaryValue = (delta) => {
+                    if (!activeWorkingExercise.value || !activeWorkingExercise.value.sets) return;
+                    activeWorkingExercise.value.sets.forEach(s => {
+                        s.val2 = Math.max(0, Math.round(((s.val2 || 0) + delta) * 10) / 10);
+                    });
+                };
+
+                const changeActiveUnitType = (newType) => {
+                    if (!activeWorkingExercise.value) return;
+                    activeWorkingExercise.value.unitType = newType;
                 };
 
                 const addSet = () => {
                     if (!activeWorkingExercise.value) return;
                     const lastSet = activeWorkingExercise.value.sets[activeWorkingExercise.value.sets.length - 1];
                     activeWorkingExercise.value.sets.push({
-                        weight: lastSet ? lastSet.weight : 20,
-                        reps: lastSet ? lastSet.reps : 10
+                        val1: lastSet ? lastSet.val1 : 20,
+                        val2: lastSet ? lastSet.val2 : 10
                     });
                 };
 
@@ -842,9 +1092,10 @@
                             id: Date.now().toString(),
                             name: name,
                             category: selectedCategory.value,
+                            unitType: customExerciseUnitType.value,
                             settingsNote: '',
-                            defaultWeight: 20,
-                            defaultReps: 10
+                            defaultVal1: customExerciseUnitType.value === 'distance_time' ? 3.0 : (customExerciseUnitType.value === 'swim' ? 10 : 20),
+                            defaultVal2: customExerciseUnitType.value === 'distance_time' ? 20 : (customExerciseUnitType.value === 'swim' ? 30 : 10)
                         };
                         exerciseMaster.value.push(newMaster);
                         saveMasterData();
@@ -967,11 +1218,6 @@
                     activeTab.value = 'workout';
                 };
 
-                const getMaxWeight = (ex) => {
-                    if (!ex.sets || ex.sets.length === 0) return 0;
-                    return Math.max(...ex.sets.map(s => s.weight || 0));
-                };
-
                 const deleteMasterItem = (id) => {
                     exerciseMaster.value = exerciseMaster.value.filter(m => m.id !== id);
                     saveMasterData();
@@ -979,20 +1225,21 @@
 
                 // CSV Export (Rule 6)
                 const exportCSV = () => {
-                    let csvContent = "\uFEFF日付,部位,種目名,セット番号,重量(kg),回数,種目メモ,全体メモ\n";
+                    let csvContent = "\uFEFF日付,部位,種目名,形式,セット番号,値1(kg/km/往復/分),値2(回/分),種目メモ,全体メモ\n";
 
                     Object.keys(logs.value).sort().forEach(date => {
                         const dayLog = logs.value[date];
                         if (dayLog.exercises && dayLog.exercises.length > 0) {
                             dayLog.exercises.forEach(ex => {
-                                ex.sets.forEach((set, sIdx) => {
+                                (ex.sets || []).forEach((set, sIdx) => {
                                     const row = [
                                         `"${date}"`,
                                         `"${ex.category || ''}"`,
                                         `"${ex.name || ''}"`,
+                                        `"${ex.unitType || 'weight_reps'}"`,
                                         sIdx + 1,
-                                        set.weight || 0,
-                                        set.reps || 0,
+                                        set.val1 !== undefined ? set.val1 : (set.weight || 0),
+                                        set.val2 !== undefined ? set.val2 : (set.reps || 0),
                                         `"${(ex.note || '').replace(/"/g, '""')}"`,
                                         `"${(dayLog.memo || '').replace(/"/g, '""')}"`
                                     ];
@@ -1029,11 +1276,19 @@
                             const line = lines[i].trim();
                             if (!line) continue;
 
-                            // Regex for CSV parsing handling quotes
                             const parts = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
                             if (parts && parts.length >= 6) {
                                 const clean = parts.map(p => p.replace(/^"|"$/g, '').trim());
-                                const [date, category, name, setNum, weight, reps, exNote, dayMemo] = clean;
+                                
+                                let date, category, name, unitType, setNum, val1, val2, exNote, dayMemo;
+
+                                if (parts.length >= 9) {
+                                    [date, category, name, unitType, setNum, val1, val2, exNote, dayMemo] = clean;
+                                } else {
+                                    // Compatibility with old 8-column format
+                                    [date, category, name, setNum, val1, val2, exNote, dayMemo] = clean;
+                                    unitType = category === '自由/有酸素' ? 'distance_time' : 'weight_reps';
+                                }
 
                                 if (date && name) {
                                     if (!logs.value[date]) {
@@ -1042,13 +1297,13 @@
 
                                     let ex = logs.value[date].exercises.find(e => e.name === name);
                                     if (!ex) {
-                                        ex = { category: category || '胸', name: name, sets: [], note: exNote || '' };
+                                        ex = { category: category || '胸', name: name, unitType: unitType || 'weight_reps', sets: [], note: exNote || '' };
                                         logs.value[date].exercises.push(ex);
                                     }
 
                                     ex.sets.push({
-                                        weight: parseFloat(weight) || 0,
-                                        reps: parseInt(reps) || 0
+                                        val1: parseFloat(val1) || 0,
+                                        val2: parseFloat(val2) || 0
                                     });
 
                                     importedCount++;
@@ -1057,7 +1312,7 @@
                         }
 
                         saveLogsToStorage();
-                        alert(`CSVの読み込みが完了しました (${importedCount}件のセットをインポート)`);
+                        alert(`CSVの読み込みが完了しました (${importedCount}件のデータをインポート)`);
                     };
                     reader.readAsText(file);
                 };
@@ -1124,6 +1379,7 @@
                     selectedCategory,
                     currentExerciseName,
                     customExerciseInput,
+                    customExerciseUnitType,
                     isEditingMachineNote,
                     machineCategoryFilter,
                     categories,
@@ -1138,15 +1394,21 @@
                     previousRecordSummary,
                     totalWorkoutDays,
                     totalLiftedWeight,
+                    totalCardioDistance,
                     showCopyModal,
                     targetCopyDate,
                     calendarYear,
                     calendarMonth,
                     calendarDays,
+                    getUnitTypeLabel,
+                    formatSetDisplay,
+                    getExerciseSummaryText,
                     changeDate,
                     onDateChange,
                     onExerciseSelect,
-                    adjustWeight,
+                    changeActiveUnitType,
+                    adjustPrimaryValue,
+                    adjustSecondaryValue,
                     addSet,
                     copyLastSet,
                     removeSet,
@@ -1158,7 +1420,6 @@
                     selectDateFromCalendar,
                     openCopyModal,
                     executeCopy,
-                    getMaxWeight,
                     deleteMasterItem,
                     exportCSV,
                     importCSV,
