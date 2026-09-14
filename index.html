@@ -67,11 +67,61 @@
             user-select: none;
             -webkit-user-select: none;
         }
+
+        /* PlayStation-style Trophy Unlock Toast Animation */
+        @keyframes psTrophySlide {
+            0% { transform: translate(-50%, -100px) scale(0.9); opacity: 0; }
+            15% { transform: translate(-50%, 0) scale(1); opacity: 1; }
+            85% { transform: translate(-50%, 0) scale(1); opacity: 1; }
+            100% { transform: translate(-50%, -100px) scale(0.9); opacity: 0; }
+        }
+        .ps-trophy-toast {
+            animation: psTrophySlide 4.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        /* Standard In-App Notification Toast */
+        @keyframes toastFade {
+            0% { transform: translate(-50%, 20px); opacity: 0; }
+            15% { transform: translate(-50%, 0); opacity: 1; }
+            85% { transform: translate(-50%, 0); opacity: 1; }
+            100% { transform: translate(-50%, 20px); opacity: 0; }
+        }
+        .app-toast {
+            animation: toastFade 3s ease forwards;
+        }
     </style>
 </head>
 <body class="bg-darkbg text-slate-100 min-h-screen flex flex-col pb-20 md:pb-0">
 
     <div id="app" class="flex-1 flex flex-col max-w-4xl mx-auto w-full min-h-screen">
+
+        <!-- PS-Style Trophy Unlock Notification Toast -->
+        <div v-if="unlockedTrophyToast" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 ps-trophy-toast w-[90%] max-w-md pointer-events-none">
+            <div class="bg-slate-900/95 border-2 rounded-2xl p-3.5 shadow-2xl flex items-center gap-3 backdrop-blur-md"
+                 :class="getTrophyBorderClass(unlockedTrophyToast.tier)">
+                <div class="w-12 h-12 rounded-xl flex items-center justify-center text-xl shrink-0 shadow-lg"
+                     :class="getTrophyIconBgClass(unlockedTrophyToast.tier)">
+                    <i :class="unlockedTrophyToast.icon"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-[10px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded font-mono"
+                              :class="getTrophyBadgeClass(unlockedTrophyToast.tier)">
+                            {{ unlockedTrophyToast.tier }} トロフィー獲得
+                        </span>
+                        <span class="text-[10px] text-slate-400">実績解除！</span>
+                    </div>
+                    <div class="text-sm font-bold text-white truncate mt-0.5">{{ unlockedTrophyToast.title }}</div>
+                    <div class="text-[11px] text-slate-300 truncate">{{ unlockedTrophyToast.desc }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- General In-App Notification Toast (No Alert) -->
+        <div v-if="toastMessage" class="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 app-toast bg-emerald-600 text-white font-bold text-xs px-4 py-2.5 rounded-full shadow-lg border border-emerald-400/50 flex items-center gap-2 pointer-events-none">
+            <i class="fa-solid fa-circle-check"></i>
+            <span>{{ toastMessage }}</span>
+        </div>
 
         <!-- Top Header -->
         <header class="bg-cardbg border-b border-borderbg px-4 py-3 sticky top-0 z-30 shadow-md flex items-center justify-between">
@@ -81,12 +131,16 @@
                 </div>
                 <div>
                     <h1 class="font-bold text-lg leading-none bg-gradient-to-r from-emerald-400 to-green-300 bg-clip-text text-transparent">FitLog Pro</h1>
-                    <span class="text-[10px] text-slate-400">ジム・有酸素・プール記録＆マシン設定メモ</span>
+                    <span class="text-[10px] text-slate-400">ジム・有酸素・身体変化＆トロフィー管理</span>
                 </div>
             </div>
 
             <!-- Quick Stats Header Badge -->
-            <div class="flex items-center space-x-3 text-xs">
+            <div class="flex items-center space-x-2 text-xs">
+                <button @click="activeTab = 'trophies'" class="bg-slate-800 hover:bg-slate-700 px-2.5 py-1.5 rounded-full border border-slate-700 flex items-center space-x-1.5 transition">
+                    <i class="fa-solid fa-trophy text-amber-400"></i>
+                    <span class="font-bold text-amber-300">{{ unlockedTrophiesCount }}/{{ trophyList.length }}</span>
+                </button>
                 <div class="bg-slate-800 px-3 py-1.5 rounded-full border border-slate-700 flex items-center space-x-1.5">
                     <i class="fa-solid fa-fire text-amber-500"></i>
                     <span class="font-bold text-amber-400">{{ totalWorkoutDays }}日</span>
@@ -210,7 +264,7 @@
                             </span>
                         </div>
 
-                        <!-- Unit Type Switcher inside Form (In case user wants to change on the fly) -->
+                        <!-- Unit Type Switcher inside Form -->
                         <div class="flex items-center gap-2 text-xs">
                             <span class="text-[11px] text-slate-400">記録形式:</span>
                             <div class="flex gap-1 overflow-x-auto text-[11px]">
@@ -278,7 +332,7 @@
                                     <span class="col-span-4">時間 (分)</span>
                                 </template>
                                 <template v-else-if="activeWorkingExercise.unitType === 'swim'">
-                                    <span class="col-span-4">本数/往復 (25m/50m)</span>
+                                    <span class="col-span-4">本数/往復</span>
                                     <span class="col-span-4">時間 (分)</span>
                                 </template>
                                 <template v-else>
@@ -334,7 +388,7 @@
                             </div>
                         </div>
 
-                        <!-- Add Set & Note Controls -->
+                        <!-- Add Set Controls -->
                         <div class="flex gap-2 pt-1">
                             <button @click="addSet" class="flex-1 bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 rounded-xl py-2 text-xs font-bold transition flex items-center justify-center gap-1.5">
                                 <i class="fa-solid fa-plus text-xs"></i>
@@ -397,7 +451,7 @@
                                 </div>
                             </div>
 
-                            <!-- Sets summary tags (Smart Formatted based on unitType) -->
+                            <!-- Sets summary tags -->
                             <div class="flex flex-wrap gap-1.5 pt-1">
                                 <div v-for="(s, sI) in ex.sets" :key="sI" class="bg-slate-950 border border-slate-800 px-2.5 py-1 rounded-lg text-xs font-mono font-medium text-slate-300">
                                     <span class="text-slate-500 mr-1">#{{ sI + 1 }}</span>
@@ -473,14 +527,14 @@
                     </div>
                 </div>
 
-                <!-- Calendar Selected Day Detail & Copy Action (Rule 3 & 4) -->
+                <!-- Calendar Selected Day Detail & Copy Action -->
                 <div class="bg-cardbg rounded-2xl p-4 border border-borderbg space-y-3 shadow-md">
                     <div class="flex justify-between items-center border-b border-borderbg pb-2">
                         <h3 class="font-bold text-slate-200 text-sm">
                             {{ selectedDate }} のログ詳細
                         </h3>
 
-                        <!-- Copy to Another Day Button (Rule 4) -->
+                        <!-- Copy to Another Day Button -->
                         <button v-if="currentDailyLog.exercises.length > 0" @click="openCopyModal" class="bg-amber-600 hover:bg-amber-500 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-md shadow-amber-900/30">
                             <i class="fa-solid fa-copy"></i>
                             別日に複製
@@ -557,7 +611,242 @@
                 </div>
             </section>
 
-            <!-- 4. ANALYTICS & CSV DATA MANAGEMENT (Rule 6) -->
+            <!-- 5. BODY COMPOSITION & PHOTO PROGRESS TAB -->
+            <section v-if="activeTab === 'body'" class="space-y-4">
+                <!-- Body Log Input Form -->
+                <div class="bg-cardbg rounded-2xl p-4 border border-borderbg space-y-4 shadow-md">
+                    <div class="flex justify-between items-center border-b border-borderbg pb-2">
+                        <h2 class="font-bold text-slate-100 text-sm flex items-center gap-2">
+                            <i class="fa-solid fa-ruler-combined text-emerald-400"></i>
+                            身体サイズ＆写真の記録
+                        </h2>
+                        <span class="text-xs text-emerald-400 font-bold">{{ selectedDate }}</span>
+                    </div>
+
+                    <!-- Metric Inputs -->
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        <div class="bg-slate-900 p-2.5 rounded-xl border border-slate-800 space-y-1">
+                            <label class="text-[11px] text-slate-400 font-medium">体重 (kg)</label>
+                            <input type="number" step="0.1" v-model.number="currentBodyEntry.weight" placeholder="65.0" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-sm font-bold text-slate-100 focus:outline-none focus:border-emerald-500">
+                        </div>
+                        <div class="bg-slate-900 p-2.5 rounded-xl border border-slate-800 space-y-1">
+                            <label class="text-[11px] text-slate-400 font-medium">体脂肪率 (%)</label>
+                            <input type="number" step="0.1" v-model.number="currentBodyEntry.bodyFat" placeholder="18.0" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-sm font-bold text-slate-100 focus:outline-none focus:border-emerald-500">
+                        </div>
+                        <div class="bg-slate-900 p-2.5 rounded-xl border border-slate-800 space-y-1">
+                            <label class="text-[11px] text-slate-400 font-medium">ウエスト (cm)</label>
+                            <input type="number" step="0.5" v-model.number="currentBodyEntry.waist" placeholder="78.0" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-sm font-bold text-slate-100 focus:outline-none focus:border-emerald-500">
+                        </div>
+                        <div class="bg-slate-900 p-2.5 rounded-xl border border-slate-800 space-y-1">
+                            <label class="text-[11px] text-slate-400 font-medium">胸囲 (cm)</label>
+                            <input type="number" step="0.5" v-model.number="currentBodyEntry.chest" placeholder="95.0" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-sm font-bold text-slate-100 focus:outline-none focus:border-emerald-500">
+                        </div>
+                        <div class="bg-slate-900 p-2.5 rounded-xl border border-slate-800 space-y-1">
+                            <label class="text-[11px] text-slate-400 font-medium">腕囲・二の腕 (cm)</label>
+                            <input type="number" step="0.5" v-model.number="currentBodyEntry.arm" placeholder="32.0" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-sm font-bold text-slate-100 focus:outline-none focus:border-emerald-500">
+                        </div>
+                        <div class="bg-slate-900 p-2.5 rounded-xl border border-slate-800 space-y-1">
+                            <label class="text-[11px] text-slate-400 font-medium">太もも (cm)</label>
+                            <input type="number" step="0.5" v-model.number="currentBodyEntry.thigh" placeholder="52.0" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-sm font-bold text-slate-100 focus:outline-none focus:border-emerald-500">
+                        </div>
+                    </div>
+
+                    <!-- Photo Upload Area -->
+                    <div class="space-y-2">
+                        <label class="text-xs text-slate-400 font-medium flex items-center gap-1.5">
+                            <i class="fa-solid fa-camera text-sky-400"></i>
+                            本日の身体写真（鏡越し・正面・横など）
+                        </label>
+
+                        <div class="flex items-center gap-3">
+                            <label class="cursor-pointer bg-slate-800 hover:bg-slate-700 border border-slate-700 px-4 py-2.5 rounded-xl text-xs font-bold text-sky-300 flex items-center gap-2 transition active:scale-95 shadow-sm">
+                                <i class="fa-solid fa-cloud-arrow-up"></i>
+                                写真を選択・撮影
+                                <input type="file" accept="image/*" @change="handleBodyPhotoUpload" class="hidden">
+                            </label>
+                            <button v-if="currentBodyEntry.photo" @click="removeCurrentPhoto" class="text-xs text-rose-400 hover:text-rose-300 py-1 px-2">
+                                <i class="fa-solid fa-trash-can mr-1"></i>写真を削除
+                            </button>
+                        </div>
+
+                        <!-- Photo Preview -->
+                        <div v-if="currentBodyEntry.photo" class="relative w-36 h-48 rounded-xl overflow-hidden border-2 border-emerald-500/50 shadow-lg bg-black">
+                            <img :src="currentBodyEntry.photo" alt="Body Progress" class="w-full h-full object-cover">
+                        </div>
+                    </div>
+
+                    <!-- Memo -->
+                    <div>
+                        <input type="text" v-model="currentBodyEntry.note" placeholder="メモ (例: 朝一番測定、筋トレ直後でパンプアップ中)" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-emerald-500">
+                    </div>
+
+                    <button @click="saveBodyEntry" class="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold py-2.5 rounded-xl shadow-lg shadow-emerald-900/30 text-xs transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-floppy-disk"></i>
+                        身体データを保存
+                    </button>
+                </div>
+
+                <!-- Before / After Visual Comparison -->
+                <div v-if="photosHistory.length >= 2" class="bg-cardbg rounded-2xl p-4 border border-borderbg space-y-3 shadow-md">
+                    <h3 class="font-bold text-slate-100 text-sm flex items-center gap-2">
+                        <i class="fa-solid fa-arrows-split-up-and-left text-amber-400"></i>
+                        ビフォー・アフター比較（成長の実感）
+                    </h3>
+                    <p class="text-xs text-slate-400">過去の自分と今の自分を並べて比較できます。</p>
+
+                    <div class="grid grid-cols-2 gap-3 pt-2">
+                        <!-- Before Photo -->
+                        <div class="space-y-1 text-center">
+                            <span class="text-[11px] font-bold text-amber-400 bg-amber-950/60 border border-amber-800/60 px-2 py-0.5 rounded-full inline-block">
+                                BEFORE ({{ oldestPhotoEntry.date }})
+                            </span>
+                            <div class="w-full aspect-[3/4] rounded-xl overflow-hidden border border-slate-700 bg-black">
+                                <img :src="oldestPhotoEntry.photo" class="w-full h-full object-cover" alt="Before">
+                            </div>
+                            <span class="text-[11px] text-slate-300 font-mono">{{ oldestPhotoEntry.weight ? oldestPhotoEntry.weight + 'kg' : '' }}</span>
+                        </div>
+
+                        <!-- After Photo -->
+                        <div class="space-y-1 text-center">
+                            <span class="text-[11px] font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-800/60 px-2 py-0.5 rounded-full inline-block">
+                                LATEST ({{ latestPhotoEntry.date }})
+                            </span>
+                            <div class="w-full aspect-[3/4] rounded-xl overflow-hidden border-2 border-emerald-500/80 bg-black">
+                                <img :src="latestPhotoEntry.photo" class="w-full h-full object-cover" alt="After">
+                            </div>
+                            <span class="text-[11px] text-slate-300 font-mono">{{ latestPhotoEntry.weight ? latestPhotoEntry.weight + 'kg' : '' }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Body History List -->
+                <div class="bg-cardbg rounded-2xl p-4 border border-borderbg space-y-3 shadow-md">
+                    <h3 class="font-bold text-slate-100 text-sm flex items-center gap-2 border-b border-borderbg pb-2">
+                        <i class="fa-solid fa-clock-rotate-left text-slate-400"></i>
+                        測定履歴一覧
+                    </h3>
+
+                    <div v-if="bodyHistoryList.length === 0" class="text-center py-6 text-slate-500 text-xs">
+                        まだ身体測定データがありません。上のフォームから記録してみましょう！
+                    </div>
+
+                    <div v-else class="space-y-2.5">
+                        <div v-for="b in bodyHistoryList" :key="b.date" class="bg-slate-900 border border-slate-800 p-3 rounded-xl flex items-center justify-between gap-2">
+                            <div class="flex items-center gap-3">
+                                <div v-if="b.photo" class="w-12 h-16 rounded-lg overflow-hidden shrink-0 border border-slate-700 bg-black">
+                                    <img :src="b.photo" class="w-full h-full object-cover">
+                                </div>
+                                <div v-else class="w-12 h-16 rounded-lg border border-dashed border-slate-800 flex items-center justify-center text-slate-600 shrink-0">
+                                    <i class="fa-regular fa-image"></i>
+                                </div>
+
+                                <div>
+                                    <div class="font-bold text-slate-200 text-xs">{{ b.date }}</div>
+                                    <div class="text-[11px] text-slate-400 space-x-2 mt-0.5 font-mono">
+                                        <span v-if="b.weight"><strong class="text-emerald-400">{{ b.weight }}</strong>kg</span>
+                                        <span v-if="b.bodyFat"><strong class="text-sky-400">{{ b.bodyFat }}</strong>%</span>
+                                        <span v-if="b.waist">W:{{ b.waist }}cm</span>
+                                    </div>
+                                    <p v-if="b.note" class="text-[10px] text-slate-500 mt-1 italic">{{ b.note }}</p>
+                                </div>
+                            </div>
+
+                            <button @click="deleteBodyEntry(b.date)" class="text-slate-500 hover:text-rose-400 p-2 text-xs transition">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 6. TROPHY & ACHIEVEMENTS TAB -->
+            <section v-if="activeTab === 'trophies'" class="space-y-4">
+                <!-- Trophy Summary Card -->
+                <div class="bg-gradient-to-br from-slate-900 via-slate-900 to-amber-950/30 rounded-2xl p-4 border border-amber-500/30 shadow-xl space-y-3">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-11 h-11 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 text-2xl shadow-inner">
+                                <i class="fa-solid fa-trophy"></i>
+                            </div>
+                            <div>
+                                <h2 class="font-bold text-slate-100 text-base leading-tight">トロフィー・実績ルーム</h2>
+                                <p class="text-[11px] text-amber-300/80 font-medium">達成した限界があなたの勲章になる</p>
+                            </div>
+                        </div>
+
+                        <!-- Trophy Completion Rate -->
+                        <div class="text-right">
+                            <div class="text-2xl font-black text-amber-400 font-mono">{{ trophyProgressPercent }}%</div>
+                            <div class="text-[10px] text-slate-400">{{ unlockedTrophiesCount }} / {{ trophyList.length }} 解放</div>
+                        </div>
+                    </div>
+
+                    <!-- Tier Counts Badge Row -->
+                    <div class="grid grid-cols-4 gap-2 pt-1 text-center font-mono">
+                        <div class="bg-slate-950/80 border border-cyan-500/30 p-2 rounded-xl">
+                            <div class="text-[10px] text-cyan-300 font-bold">PLATINUM</div>
+                            <div class="text-base font-black text-cyan-400">{{ getTierCount('platinum') }}</div>
+                        </div>
+                        <div class="bg-slate-950/80 border border-amber-500/30 p-2 rounded-xl">
+                            <div class="text-[10px] text-amber-300 font-bold">GOLD</div>
+                            <div class="text-base font-black text-amber-400">{{ getTierCount('gold') }}</div>
+                        </div>
+                        <div class="bg-slate-950/80 border border-slate-400/30 p-2 rounded-xl">
+                            <div class="text-[10px] text-slate-300 font-bold">SILVER</div>
+                            <div class="text-base font-black text-slate-200">{{ getTierCount('silver') }}</div>
+                        </div>
+                        <div class="bg-slate-950/80 border border-amber-800/30 p-2 rounded-xl">
+                            <div class="text-[10px] text-amber-600 font-bold">BRONZE</div>
+                            <div class="text-base font-black text-amber-500">{{ getTierCount('bronze') }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Trophies List -->
+                <div class="space-y-3">
+                    <div v-for="t in trophyList" :key="t.id"
+                         :class="[
+                             'rounded-2xl p-3.5 border transition relative overflow-hidden flex items-center gap-3.5',
+                             t.unlocked ? 'bg-slate-900/90 border-slate-700 shadow-md' : 'bg-slate-950/40 border-slate-800/60 opacity-60'
+                         ]">
+                        <!-- Trophy Icon -->
+                        <div class="w-13 h-13 rounded-2xl flex items-center justify-center text-xl shrink-0 p-3 shadow-md"
+                             :class="t.unlocked ? getTrophyIconBgClass(t.tier) : 'bg-slate-800 text-slate-600 border border-slate-700/50'">
+                            <i :class="t.icon"></i>
+                        </div>
+
+                        <!-- Trophy Information -->
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded font-mono"
+                                      :class="t.unlocked ? getTrophyBadgeClass(t.tier) : 'bg-slate-800 text-slate-500'">
+                                    {{ t.tier }}
+                                </span>
+                                <h3 class="font-bold text-sm text-slate-100 truncate">{{ t.title }}</h3>
+                            </div>
+                            <p class="text-xs text-slate-400 mt-0.5 leading-tight">{{ t.desc }}</p>
+
+                            <!-- Progress Bar or Unlocked Date -->
+                            <div class="mt-2">
+                                <div v-if="t.unlocked" class="text-[10px] text-emerald-400 font-mono font-medium flex items-center gap-1">
+                                    <i class="fa-solid fa-check"></i> 解放日: {{ t.unlockedAt }}
+                                </div>
+                                <div v-else class="space-y-1">
+                                    <div class="flex justify-between text-[10px] text-slate-500 font-mono">
+                                        <span>進捗</span>
+                                        <span>{{ t.currentProgress }} / {{ t.target }} {{ t.unit }}</span>
+                                    </div>
+                                    <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                                        <div class="bg-amber-500 h-full rounded-full transition-all duration-500" :style="{ width: Math.min(100, (t.currentProgress / t.target) * 100) + '%' }"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 4. ANALYTICS & CSV DATA MANAGEMENT -->
             <section v-if="activeTab === 'analytics'" class="space-y-4">
                 <!-- PC/Mobile Stats Overview Cards -->
                 <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -586,7 +875,7 @@
                     </div>
                 </div>
 
-                <!-- CSV Export & Import Section (Rule 6) -->
+                <!-- CSV Export & Import Section -->
                 <div class="bg-cardbg rounded-2xl p-4 border border-borderbg space-y-3 shadow-md">
                     <h3 class="font-bold text-slate-100 text-sm flex items-center gap-2 border-b border-borderbg pb-2">
                         <i class="fa-solid fa-file-csv text-sky-400"></i>
@@ -616,7 +905,7 @@
 
         </main>
 
-        <!-- Copy to Another Day Modal (Rule 4) -->
+        <!-- Copy to Another Day Modal -->
         <div v-if="showCopyModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <div class="bg-cardbg border border-borderbg rounded-2xl p-5 max-w-sm w-full space-y-4 shadow-2xl">
                 <h3 class="font-bold text-slate-100 text-base flex items-center gap-2">
@@ -646,25 +935,35 @@
 
         <!-- Bottom Responsive Navigation Bar -->
         <nav class="fixed bottom-0 left-0 right-0 bg-cardbg/95 backdrop-blur-md border-t border-borderbg z-40 max-w-4xl mx-auto">
-            <div class="grid grid-cols-4 text-center py-2">
+            <div class="grid grid-cols-6 text-center py-2">
                 <button @click="activeTab = 'workout'" :class="['flex flex-col items-center gap-1 transition', activeTab === 'workout' ? 'text-emerald-400 font-bold' : 'text-slate-500 hover:text-slate-300']">
-                    <i class="fa-solid fa-dumbbell text-lg"></i>
-                    <span class="text-[10px]">記録</span>
+                    <i class="fa-solid fa-dumbbell text-base"></i>
+                    <span class="text-[9px]">記録</span>
                 </button>
 
                 <button @click="activeTab = 'calendar'" :class="['flex flex-col items-center gap-1 transition', activeTab === 'calendar' ? 'text-emerald-400 font-bold' : 'text-slate-500 hover:text-slate-300']">
-                    <i class="fa-regular fa-calendar-days text-lg"></i>
-                    <span class="text-[10px]">カレンダー</span>
+                    <i class="fa-regular fa-calendar-days text-base"></i>
+                    <span class="text-[9px]">カレンダー</span>
+                </button>
+
+                <button @click="activeTab = 'body'" :class="['flex flex-col items-center gap-1 transition', activeTab === 'body' ? 'text-emerald-400 font-bold' : 'text-slate-500 hover:text-slate-300']">
+                    <i class="fa-solid fa-camera text-base"></i>
+                    <span class="text-[9px]">身体・写真</span>
+                </button>
+
+                <button @click="activeTab = 'trophies'" :class="['flex flex-col items-center gap-1 transition', activeTab === 'trophies' ? 'text-amber-400 font-bold' : 'text-slate-500 hover:text-slate-300']">
+                    <i class="fa-solid fa-trophy text-base"></i>
+                    <span class="text-[9px]">トロフィー</span>
                 </button>
 
                 <button @click="activeTab = 'machines'" :class="['flex flex-col items-center gap-1 transition', activeTab === 'machines' ? 'text-emerald-400 font-bold' : 'text-slate-500 hover:text-slate-300']">
-                    <i class="fa-solid fa-sliders text-lg"></i>
-                    <span class="text-[10px]">マシンメモ</span>
+                    <i class="fa-solid fa-sliders text-base"></i>
+                    <span class="text-[9px]">マシン設定</span>
                 </button>
 
                 <button @click="activeTab = 'analytics'" :class="['flex flex-col items-center gap-1 transition', activeTab === 'analytics' ? 'text-emerald-400 font-bold' : 'text-slate-500 hover:text-slate-300']">
-                    <i class="fa-solid fa-chart-line text-lg"></i>
-                    <span class="text-[10px]">統計・CSV</span>
+                    <i class="fa-solid fa-chart-line text-base"></i>
+                    <span class="text-[9px]">統計・CSV</span>
                 </button>
             </div>
         </nav>
@@ -674,7 +973,7 @@
     <script>
         const { createApp, ref, computed, watch, onMounted, nextTick } = Vue;
 
-        // タイムゾーンのズレを防止するためのローカル日付フォーマット関数
+        // Local date string helper (prevents UTC date shifts)
         const getLocalDateStr = (d = new Date()) => {
             const year = d.getFullYear();
             const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -688,6 +987,36 @@
             return `${year}-${m}-${d}`;
         };
 
+        // Web Audio API Trophy Sound Synthesis
+        const playTrophyUnlockSound = () => {
+            try {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                if (!AudioCtx) return;
+                const ctx = new AudioCtx();
+                
+                const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+                notes.forEach((freq, idx) => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.08);
+                    
+                    gain.gain.setValueAtTime(0, ctx.currentTime + idx * 0.08);
+                    gain.gain.linearRampToValueAtTime(0.18, ctx.currentTime + idx * 0.08 + 0.02);
+                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.08 + 0.35);
+                    
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    
+                    osc.start(ctx.currentTime + idx * 0.08);
+                    osc.stop(ctx.currentTime + idx * 0.08 + 0.36);
+                });
+            } catch (e) {
+                console.warn('Audio play restricted or unsupported:', e);
+            }
+        };
+
         createApp({
             setup() {
                 // Application State
@@ -699,6 +1028,7 @@
                 const customExerciseUnitType = ref('weight_reps');
                 const isEditingMachineNote = ref(false);
                 const machineCategoryFilter = ref('ALL');
+                const toastMessage = ref('');
 
                 // Modal state
                 const showCopyModal = ref(false);
@@ -708,7 +1038,7 @@
                 const calendarYear = ref(new Date().getFullYear());
                 const calendarMonth = ref(new Date().getMonth());
 
-                // Default Preset Categories (Rule 1)
+                // Categories Definition (胸, 背中, 腕, 腹, 脚, 肩, 自由/有酸素)
                 const categories = [
                     { id: '胸', name: '胸', icon: 'fa-solid fa-shield-halved' },
                     { id: '背中', name: '背中', icon: 'fa-solid fa-child-reaching' },
@@ -716,11 +1046,51 @@
                     { id: '腹', name: '腹', icon: 'fa-solid fa-bullseye' },
                     { id: '脚', name: '脚', icon: 'fa-solid fa-person-walking' },
                     { id: '肩', name: '肩', icon: 'fa-solid fa-arrows-up-down-left-right' },
-                    { id: '自由/有酸素', name: '自由/有酸素', icon: 'fa-solid fa-person-running' },
+                    { id: '自由/有酸素', name: '自由/有酸素', icon: 'fa-solid fa-person-running' }
                 ];
 
-                // Initial Preset Exercises Master Data with unitTypes (Rule 9 & Updated Request)
-                // unitType: 'weight_reps' (kg × 回) | 'distance_time' (km × 分) | 'swim' (往復/本 × 分) | 'time' (分のみ)
+                // Body Tracking State
+                const bodyLogs = ref({});
+                const currentBodyEntry = ref({
+                    weight: null,
+                    bodyFat: null,
+                    waist: null,
+                    chest: null,
+                    arm: null,
+                    thigh: null,
+                    photo: null,
+                    note: ''
+                });
+
+                // Trophy Unlocking State
+                const unlockedTrophyToast = ref(null);
+                const unlockedTrophyIds = ref({});
+
+                const rawTrophyList = [
+                    // BRONZE
+                    { id: 'first_workout', tier: 'bronze', icon: 'fa-solid fa-shoe-prints', title: 'はじめの一歩', desc: '初めてジムのトレーニングを記録した', target: 1, unit: '日' },
+                    { id: 'streak_3', tier: 'bronze', icon: 'fa-solid fa-fire', title: '3日連続トレーニー', desc: '3日間連続でジムを記録した', target: 3, unit: '日連続' },
+                    { id: 'cardio_5k', tier: 'bronze', icon: 'fa-solid fa-person-running', title: '有酸素デビュー', desc: '有酸素または走行の累計が5kmを突破', target: 5, unit: 'km' },
+                    { id: 'swim_10', tier: 'bronze', icon: 'fa-solid fa-person-swimming', title: '初泳ぎ', desc: 'プールで通算10往復以上泳いだ', target: 10, unit: '往復' },
+                    { id: 'body_first', tier: 'bronze', icon: 'fa-solid fa-camera', title: 'ボディスナップ', desc: '身体の測定データまたは写真を初めて記録した', target: 1, unit: '回' },
+                    
+                    // SILVER
+                    { id: 'workout_10days', tier: 'silver', icon: 'fa-solid fa-calendar-check', title: '月間マスター', desc: '通算10日以上のジム記録を達成', target: 10, unit: '日' },
+                    { id: 'ton_5', tier: 'silver', icon: 'fa-solid fa-weight-hanging', title: 'ゾウを持ち上げた男', desc: '筋トレの総挙上重量が5,000kg (5t) を突破！', target: 5000, unit: 'kg' },
+                    { id: 'cardio_20k', tier: 'silver', icon: 'fa-solid fa-road', title: 'ハーフマラソンの領域', desc: '有酸素の累計距離が20kmを突破', target: 20, unit: 'km' },
+                    { id: 'swim_50', tier: 'silver', icon: 'fa-solid fa-water', title: 'スイマーの目覚め', desc: 'プールで通算50往復を達成', target: 50, unit: '往復' },
+                    { id: 'all_parts', tier: 'silver', icon: 'fa-solid fa-layer-group', title: 'バランスの求道者', desc: '胸・背中・腕・腹・脚・肩の全部位を記録した', target: 6, unit: '部位' },
+
+                    // GOLD
+                    { id: 'workout_30days', tier: 'gold', icon: 'fa-solid fa-award', title: '鉄人の意志', desc: '通算30日ジム記録達成！立派なアスリートの習慣', target: 30, unit: '日' },
+                    { id: 'ton_25', tier: 'gold', icon: 'fa-solid fa-dumbbell', title: 'ヘラクレスの怪力', desc: '筋トレの総挙上重量が25,000kg (25t) を突破！', target: 25000, unit: 'kg' },
+                    { id: 'marathon_42', tier: 'gold', icon: 'fa-solid fa-medal', title: 'フルマラソン踏破', desc: '有酸素の累計距離が42.195kmを突破！', target: 42, unit: 'km' },
+                    { id: 'swim_100', tier: 'gold', icon: 'fa-solid fa-fish', title: '水中の魚', desc: 'プールで通算100往復 (5km) を達成！', target: 100, unit: '往復' },
+
+                    // PLATINUM
+                    { id: 'fitlog_master', tier: 'platinum', icon: 'fa-solid fa-crown', title: 'FitLog Legend', desc: '他のトロフィーを10個以上獲得した真のジムマスター', target: 10, unit: '個' }
+                ];
+
                 const defaultMaster = [
                     { id: '1', name: 'チェストプレス', category: '胸', unitType: 'weight_reps', settingsNote: 'シート高さ: 3, グリップ位置: パラレル', defaultVal1: 30, defaultVal2: 10 },
                     { id: '2', name: 'ペックフライ', category: '胸', unitType: 'weight_reps', settingsNote: 'シート高さ: 2, アーム開き: 3番目', defaultVal1: 25, defaultVal2: 12 },
@@ -731,7 +1101,6 @@
                     { id: '7', name: 'レッグエクステンション', category: '脚', unitType: 'weight_reps', settingsNote: '足首パット: 2, 背もたれ: 4', defaultVal1: 25, defaultVal2: 12 },
                     { id: '8', name: 'アームカール (ダンベル)', category: '腕', unitType: 'weight_reps', settingsNote: 'ベンチ角度: インクライン 60度', defaultVal1: 10, defaultVal2: 10 },
                     { id: '9', name: 'サイドレイズ', category: '肩', unitType: 'weight_reps', settingsNote: 'ダンベル小指側をやや高めに', defaultVal1: 6, defaultVal2: 15 },
-                    // Cardio / Free / Pool Items
                     { id: '10', name: 'トレッドミル (ランニング)', category: '自由/有酸素', unitType: 'distance_time', settingsNote: '傾斜: 1.5%, 速度: 9.0km/h', defaultVal1: 3.0, defaultVal2: 20 },
                     { id: '11', name: 'ウォーキング (ルームランナー)', category: '自由/有酸素', unitType: 'distance_time', settingsNote: '傾斜: 3.0%, 速度: 5.5km/h', defaultVal1: 2.0, defaultVal2: 25 },
                     { id: '12', name: 'プール (水泳・25m往復)', category: '自由/有酸素', unitType: 'swim', settingsNote: 'レーン: 完泳コース / クロール&平泳ぎ', defaultVal1: 10, defaultVal2: 30 },
@@ -740,14 +1109,12 @@
                 ];
 
                 const exerciseMaster = ref([]);
-                const logs = ref({}); // Key: 'YYYY-MM-DD', Value: { date, exercises: [], memo: '' }
-
-                // Currently editing exercise object in form
+                const logs = ref({});
                 const activeWorkingExercise = ref(null);
                 const hasPreviousRecord = ref(false);
                 const previousRecordSummary = ref('');
 
-                // Helper: Unit Label Formatter
+                // Helper: Unit label
                 const getUnitTypeLabel = (type) => {
                     switch (type) {
                         case 'distance_time': return '距離(km) × 時間(分)';
@@ -758,7 +1125,6 @@
                     }
                 };
 
-                // Normalize old log entries for backward compatibility (weight/reps -> val1/val2)
                 const normalizeExerciseData = (ex) => {
                     const unitType = ex.unitType || (ex.category === '自由/有酸素' ? 'distance_time' : 'weight_reps');
                     const sets = (ex.sets || []).map(s => {
@@ -776,7 +1142,35 @@
                     };
                 };
 
-                // Initialize Data from localStorage
+                const showNotification = (msg) => {
+                    toastMessage.value = msg;
+                    setTimeout(() => {
+                        toastMessage.value = '';
+                    }, 3000);
+                };
+
+                const saveMasterData = () => {
+                    localStorage.setItem('fitlog_master_v2', JSON.stringify(exerciseMaster.value));
+                };
+
+                const saveLogsToStorage = () => {
+                    localStorage.setItem('fitlog_logs_v2', JSON.stringify(logs.value));
+                };
+
+                const saveBodyLogsToStorage = () => {
+                    localStorage.setItem('fitlog_body_logs', JSON.stringify(bodyLogs.value));
+                };
+
+                const ensureDailyLogExists = (dateStr) => {
+                    if (!logs.value[dateStr]) {
+                        logs.value[dateStr] = {
+                            date: dateStr,
+                            exercises: [],
+                            memo: ''
+                        };
+                    }
+                };
+
                 onMounted(() => {
                     const savedMaster = localStorage.getItem('fitlog_master_v2');
                     if (savedMaster) {
@@ -790,7 +1184,6 @@
                     if (savedLogs) {
                         try { 
                             const parsed = JSON.parse(savedLogs);
-                            // Normalize existing logs
                             Object.keys(parsed).forEach(date => {
                                 if (parsed[date] && parsed[date].exercises) {
                                     parsed[date].exercises = parsed[date].exercises.map(normalizeExerciseData);
@@ -798,47 +1191,24 @@
                             });
                             logs.value = parsed;
                         } catch(e) { logs.value = {}; }
-                    } else {
-                        // Fallback check v1 logs
-                        const oldLogs = localStorage.getItem('fitlog_logs');
-                        if (oldLogs) {
-                            try {
-                                const parsedOld = JSON.parse(oldLogs);
-                                Object.keys(parsedOld).forEach(date => {
-                                    if (parsedOld[date] && parsedOld[date].exercises) {
-                                        parsedOld[date].exercises = parsedOld[date].exercises.map(normalizeExerciseData);
-                                    }
-                                });
-                                logs.value = parsedOld;
-                                saveLogsToStorage();
-                            } catch(e) {}
-                        }
+                    }
+
+                    const savedBody = localStorage.getItem('fitlog_body_logs');
+                    if (savedBody) {
+                        try { bodyLogs.value = JSON.parse(savedBody); } catch(e) { bodyLogs.value = {}; }
+                    }
+                    loadCurrentBodyEntry(selectedDate.value);
+
+                    const savedTrophies = localStorage.getItem('fitlog_unlocked_trophies');
+                    if (savedTrophies) {
+                        try { unlockedTrophyIds.value = JSON.parse(savedTrophies); } catch(e) { unlockedTrophyIds.value = {}; }
                     }
 
                     ensureDailyLogExists(selectedDate.value);
+                    checkTrophies(false);
                     renderChart();
                 });
 
-                // Watchers for Persistence
-                const saveMasterData = () => {
-                    localStorage.setItem('fitlog_master_v2', JSON.stringify(exerciseMaster.value));
-                };
-
-                const saveLogsToStorage = () => {
-                    localStorage.setItem('fitlog_logs_v2', JSON.stringify(logs.value));
-                };
-
-                const ensureDailyLogExists = (dateStr) => {
-                    if (!logs.value[dateStr]) {
-                        logs.value[dateStr] = {
-                            date: dateStr,
-                            exercises: [],
-                            memo: ''
-                        };
-                    }
-                };
-
-                // Computed Properties
                 const currentDailyLog = computed(() => {
                     ensureDailyLogExists(selectedDate.value);
                     return logs.value[selectedDate.value];
@@ -901,7 +1271,175 @@
                     return sum;
                 });
 
-                // Display Format Helpers for Sets
+                const totalSwimLaps = computed(() => {
+                    let sum = 0;
+                    Object.values(logs.value).forEach(log => {
+                        if (log.exercises) {
+                            log.exercises.forEach(ex => {
+                                if (ex.unitType === 'swim' && ex.sets) {
+                                    ex.sets.forEach(s => sum += (s.val1 || 0));
+                                }
+                            });
+                        }
+                    });
+                    return sum;
+                });
+
+                const recordedBodyCount = computed(() => {
+                    return Object.keys(bodyLogs.value).length;
+                });
+
+                const uniqueCategoriesTrained = computed(() => {
+                    const set = new Set();
+                    Object.values(logs.value).forEach(log => {
+                        if (log.exercises) {
+                            log.exercises.forEach(ex => {
+                                if (['胸', '背中', '腕', '腹', '脚', '肩'].includes(ex.category)) {
+                                    set.add(ex.category);
+                                }
+                            });
+                        }
+                    });
+                    return set.size;
+                });
+
+                const maxWorkoutStreak = computed(() => {
+                    const dates = Object.keys(logs.value)
+                        .filter(k => logs.value[k].exercises && logs.value[k].exercises.length > 0)
+                        .sort();
+                    if (dates.length === 0) return 0;
+
+                    let maxStreak = 1;
+                    let currentStreak = 1;
+
+                    for (let i = 1; i < dates.length; i++) {
+                        const d1 = new Date(dates[i - 1]);
+                        const d2 = new Date(dates[i]);
+                        const diffTime = d2.getTime() - d1.getTime();
+                        const diffDays = Math.round(diffTime / (1000 * 3600 * 24));
+
+                        if (diffDays === 1) {
+                            currentStreak++;
+                            if (currentStreak > maxStreak) maxStreak = currentStreak;
+                        } else if (diffDays > 1) {
+                            currentStreak = 1;
+                        }
+                    }
+                    return maxStreak;
+                });
+
+                const trophyList = computed(() => {
+                    return rawTrophyList.map(t => {
+                        let currentProgress = 0;
+                        switch (t.id) {
+                            case 'first_workout': currentProgress = totalWorkoutDays.value; break;
+                            case 'streak_3': currentProgress = maxWorkoutStreak.value; break;
+                            case 'cardio_5k':
+                            case 'cardio_20k':
+                            case 'marathon_42': currentProgress = Math.floor(totalCardioDistance.value); break;
+                            case 'swim_10':
+                            case 'swim_50':
+                            case 'swim_100': currentProgress = totalSwimLaps.value; break;
+                            case 'body_first': currentProgress = recordedBodyCount.value; break;
+                            case 'workout_10days':
+                            case 'workout_30days': currentProgress = totalWorkoutDays.value; break;
+                            case 'ton_5':
+                            case 'ton_25': currentProgress = Math.floor(totalLiftedWeight.value); break;
+                            case 'all_parts': currentProgress = uniqueCategoriesTrained.value; break;
+                            case 'fitlog_master':
+                                currentProgress = Object.keys(unlockedTrophyIds.value).filter(id => id !== 'fitlog_master').length;
+                                break;
+                        }
+
+                        const isUnlocked = !!unlockedTrophyIds.value[t.id];
+                        return {
+                            ...t,
+                            currentProgress: Math.min(t.target, currentProgress),
+                            unlocked: isUnlocked,
+                            unlockedAt: unlockedTrophyIds.value[t.id] || null
+                        };
+                    });
+                });
+
+                const unlockedTrophiesCount = computed(() => {
+                    return trophyList.value.filter(t => t.unlocked).length;
+                });
+
+                const trophyProgressPercent = computed(() => {
+                    if (trophyList.value.length === 0) return 0;
+                    return Math.round((unlockedTrophiesCount.value / trophyList.value.length) * 100);
+                });
+
+                const getTierCount = (tier) => {
+                    return trophyList.value.filter(t => t.tier === tier && t.unlocked).length;
+                };
+
+                const getTrophyBorderClass = (tier) => {
+                    switch (tier) {
+                        case 'platinum': return 'border-cyan-400 shadow-cyan-900/50';
+                        case 'gold': return 'border-amber-400 shadow-amber-900/50';
+                        case 'silver': return 'border-slate-300 shadow-slate-700/50';
+                        case 'bronze':
+                        default: return 'border-amber-700 shadow-amber-950/50';
+                    }
+                };
+
+                const getTrophyIconBgClass = (tier) => {
+                    switch (tier) {
+                        case 'platinum': return 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/50';
+                        case 'gold': return 'bg-amber-500/20 text-amber-300 border border-amber-400/50';
+                        case 'silver': return 'bg-slate-500/20 text-slate-200 border border-slate-300/50';
+                        case 'bronze':
+                        default: return 'bg-amber-900/40 text-amber-500 border border-amber-700/50';
+                    }
+                };
+
+                const getTrophyBadgeClass = (tier) => {
+                    switch (tier) {
+                        case 'platinum': return 'bg-cyan-400 text-slate-950';
+                        case 'gold': return 'bg-amber-400 text-slate-950';
+                        case 'silver': return 'bg-slate-300 text-slate-950';
+                        case 'bronze':
+                        default: return 'bg-amber-700 text-white';
+                    }
+                };
+
+                const triggerTrophyToast = (trophy) => {
+                    unlockedTrophyToast.value = trophy;
+                    playTrophyUnlockSound();
+
+                    if (window.confetti) {
+                        confetti({
+                            particleCount: 70,
+                            spread: 80,
+                            origin: { y: 0.2 }
+                        });
+                    }
+
+                    setTimeout(() => {
+                        unlockedTrophyToast.value = null;
+                    }, 4300);
+                };
+
+                const checkTrophies = (shouldNotify = true) => {
+                    const todayStr = getLocalDateStr();
+                    let newlyUnlocked = false;
+
+                    trophyList.value.forEach(t => {
+                        if (!unlockedTrophyIds.value[t.id] && t.currentProgress >= t.target) {
+                            unlockedTrophyIds.value[t.id] = todayStr;
+                            newlyUnlocked = true;
+                            if (shouldNotify) {
+                                triggerTrophyToast(t);
+                            }
+                        }
+                    });
+
+                    if (newlyUnlocked) {
+                        localStorage.setItem('fitlog_unlocked_trophies', JSON.stringify(unlockedTrophyIds.value));
+                    }
+                };
+
                 const formatSetDisplay = (unitType, s) => {
                     const v1 = s.val1 || 0;
                     const v2 = s.val2 || 0;
@@ -921,7 +1459,6 @@
                 const getExerciseSummaryText = (ex) => {
                     if (!ex.sets || ex.sets.length === 0) return '記録なし';
                     const count = ex.sets.length;
-                    const first = ex.sets[0];
                     switch (ex.unitType) {
                         case 'distance_time': {
                             const totalKm = ex.sets.reduce((acc, cur) => acc + (cur.val1 || 0), 0);
@@ -945,7 +1482,6 @@
                     }
                 };
 
-                // Exercise Selection Trigger -> Auto-fill Previous Data (Rule 7)
                 const onExerciseSelect = () => {
                     if (!currentExerciseName.value) return;
 
@@ -953,7 +1489,6 @@
                     const masterEx = exerciseMaster.value.find(m => m.name === exName);
                     const unitType = masterEx ? masterEx.unitType : (selectedCategory.value === '自由/有酸素' ? 'distance_time' : 'weight_reps');
 
-                    // Find most recent previous log for this exercise
                     let prevSets = null;
                     const sortedDates = Object.keys(logs.value).sort().reverse();
 
@@ -981,7 +1516,6 @@
                             previousRecordSummary.value = `${s0.val1}kg × ${s0.val2}回 (${prevSets.length}セット)`;
                         }
 
-                        // Copy sets from last time
                         activeWorkingExercise.value = {
                             name: exName,
                             category: masterEx ? masterEx.category : selectedCategory.value,
@@ -992,7 +1526,6 @@
                     } else {
                         hasPreviousRecord.value = false;
                         previousRecordSummary.value = '';
-                        // Default initial sets
                         const defaultV1 = masterEx ? (masterEx.defaultVal1 ?? 20) : 20;
                         const defaultV2 = masterEx ? (masterEx.defaultVal2 ?? 10) : 10;
 
@@ -1012,7 +1545,6 @@
                     }
                 };
 
-                // Quick Increment Weights / Distances / Time (Rule 7 Adaptive)
                 const adjustPrimaryValue = (delta) => {
                     if (!activeWorkingExercise.value || !activeWorkingExercise.value.sets) return;
                     activeWorkingExercise.value.sets.forEach(s => {
@@ -1051,14 +1583,12 @@
                     }
                 };
 
-                // Save or Update Exercise in Today's Log
                 const saveExerciseToDailyLog = () => {
                     if (!activeWorkingExercise.value) return;
 
                     ensureDailyLogExists(selectedDate.value);
                     const daily = logs.value[selectedDate.value];
 
-                    // Check if already exists, replace or append
                     const existingIdx = daily.exercises.findIndex(e => e.name === activeWorkingExercise.value.name);
                     if (existingIdx >= 0) {
                         daily.exercises[existingIdx] = JSON.parse(JSON.stringify(activeWorkingExercise.value));
@@ -1068,7 +1598,6 @@
 
                     saveLogsToStorage();
 
-                    // Trigger Confetti Animation for Motivation
                     if (window.confetti) {
                         confetti({
                             particleCount: 40,
@@ -1077,9 +1606,9 @@
                         });
                     }
 
-                    // Reset active form
                     activeWorkingExercise.value = null;
                     currentExerciseName.value = '';
+                    checkTrophies(true);
                 };
 
                 const addCustomExercise = () => {
@@ -1134,7 +1663,6 @@
                     activeWorkingExercise.value = null;
                 };
 
-                // Calendar Methods
                 const calendarDays = computed(() => {
                     const year = calendarYear.value;
                     const month = calendarMonth.value;
@@ -1145,7 +1673,6 @@
                     const days = [];
                     const todayStr = getLocalDateStr();
 
-                    // Padding previous month days
                     const startDayOfWeek = firstDay.getDay();
                     for (let i = startDayOfWeek - 1; i >= 0; i--) {
                         const d = new Date(year, month, -i);
@@ -1160,7 +1687,6 @@
                         });
                     }
 
-                    // Current month days
                     for (let i = 1; i <= lastDay.getDate(); i++) {
                         const dateStr = formatYMD(year, month + 1, i);
                         days.push({
@@ -1194,7 +1720,6 @@
                     ensureDailyLogExists(dateStr);
                 };
 
-                // Copy functionality (Rule 4)
                 const openCopyModal = () => {
                     targetCopyDate.value = getLocalDateStr();
                     showCopyModal.value = true;
@@ -1216,6 +1741,7 @@
                     showCopyModal.value = false;
                     selectedDate.value = targetCopyDate.value;
                     activeTab.value = 'workout';
+                    showNotification(`${targetCopyDate.value} に記録を複製しました`);
                 };
 
                 const deleteMasterItem = (id) => {
@@ -1223,7 +1749,102 @@
                     saveMasterData();
                 };
 
-                // CSV Export (Rule 6)
+                const loadCurrentBodyEntry = (dateStr) => {
+                    if (bodyLogs.value[dateStr]) {
+                        currentBodyEntry.value = JSON.parse(JSON.stringify(bodyLogs.value[dateStr]));
+                    } else {
+                        currentBodyEntry.value = {
+                            weight: null,
+                            bodyFat: null,
+                            waist: null,
+                            chest: null,
+                            arm: null,
+                            thigh: null,
+                            photo: null,
+                            note: ''
+                        };
+                    }
+                };
+
+                const handleBodyPhotoUpload = (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        const img = new Image();
+                        img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            const maxDim = 600;
+                            let w = img.width;
+                            let h = img.height;
+                            if (w > h) {
+                                if (w > maxDim) {
+                                    h *= maxDim / w;
+                                    w = maxDim;
+                                }
+                            } else {
+                                if (h > maxDim) {
+                                    w *= maxDim / h;
+                                    h = maxDim;
+                                }
+                            }
+                            canvas.width = w;
+                            canvas.height = h;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0, w, h);
+                            currentBodyEntry.value.photo = canvas.toDataURL('image/jpeg', 0.65);
+                        };
+                        img.src = event.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                };
+
+                const removeCurrentPhoto = () => {
+                    currentBodyEntry.value.photo = null;
+                };
+
+                const saveBodyEntry = () => {
+                    bodyLogs.value[selectedDate.value] = JSON.parse(JSON.stringify(currentBodyEntry.value));
+                    saveBodyLogsToStorage();
+                    checkTrophies(true);
+
+                    if (window.confetti) {
+                        confetti({ particleCount: 30, spread: 50, origin: { y: 0.85 } });
+                    }
+                    showNotification('身体測定データを保存しました');
+                };
+
+                const deleteBodyEntry = (dateStr) => {
+                    delete bodyLogs.value[dateStr];
+                    saveBodyLogsToStorage();
+                    if (selectedDate.value === dateStr) {
+                        loadCurrentBodyEntry(dateStr);
+                    }
+                    showNotification('身体データを削除しました');
+                };
+
+                const bodyHistoryList = computed(() => {
+                    return Object.keys(bodyLogs.value)
+                        .sort().reverse()
+                        .map(date => ({ date, ...bodyLogs.value[date] }));
+                });
+
+                const photosHistory = computed(() => {
+                    return Object.keys(bodyLogs.value)
+                        .filter(d => !!bodyLogs.value[d].photo)
+                        .sort()
+                        .map(date => ({ date, ...bodyLogs.value[date] }));
+                });
+
+                const oldestPhotoEntry = computed(() => {
+                    return photosHistory.value.length > 0 ? photosHistory.value[0] : null;
+                });
+
+                const latestPhotoEntry = computed(() => {
+                    return photosHistory.value.length > 0 ? photosHistory.value[photosHistory.value.length - 1] : null;
+                });
+
                 const exportCSV = () => {
                     let csvContent = "\uFEFF日付,部位,種目名,形式,セット番号,値1(kg/km/往復/分),値2(回/分),種目メモ,全体メモ\n";
 
@@ -1257,9 +1878,9 @@
                     document.body.appendChild(link);
                     link.click();
                     document.body.removeChild(link);
+                    showNotification('CSVを書き出しました');
                 };
 
-                // CSV Import (Rule 6)
                 const importCSV = (event) => {
                     const file = event.target.files[0];
                     if (!file) return;
@@ -1285,7 +1906,6 @@
                                 if (parts.length >= 9) {
                                     [date, category, name, unitType, setNum, val1, val2, exNote, dayMemo] = clean;
                                 } else {
-                                    // Compatibility with old 8-column format
                                     [date, category, name, setNum, val1, val2, exNote, dayMemo] = clean;
                                     unitType = category === '自由/有酸素' ? 'distance_time' : 'weight_reps';
                                 }
@@ -1312,12 +1932,11 @@
                         }
 
                         saveLogsToStorage();
-                        alert(`CSVの読み込みが完了しました (${importedCount}件のデータをインポート)`);
+                        showNotification(`CSVインポート完了 (${importedCount}件)`);
                     };
                     reader.readAsText(file);
                 };
 
-                // Chart.js Category Analytics Rendering
                 let chartInstance = null;
                 const renderChart = () => {
                     nextTick(() => {
@@ -1373,6 +1992,10 @@
                     }
                 });
 
+                watch(selectedDate, (newDate) => {
+                    loadCurrentBodyEntry(newDate);
+                });
+
                 return {
                     activeTab,
                     selectedDate,
@@ -1382,6 +2005,7 @@
                     customExerciseUnitType,
                     isEditingMachineNote,
                     machineCategoryFilter,
+                    toastMessage,
                     categories,
                     exerciseMaster,
                     currentDailyLog,
@@ -1395,6 +2019,7 @@
                     totalWorkoutDays,
                     totalLiftedWeight,
                     totalCardioDistance,
+                    totalSwimLaps,
                     showCopyModal,
                     targetCopyDate,
                     calendarYear,
@@ -1424,7 +2049,26 @@
                     exportCSV,
                     importCSV,
                     saveLogsToStorage,
-                    saveMasterData
+                    saveMasterData,
+                    // Body & Trophy Exports
+                    bodyLogs,
+                    currentBodyEntry,
+                    bodyHistoryList,
+                    photosHistory,
+                    oldestPhotoEntry,
+                    latestPhotoEntry,
+                    handleBodyPhotoUpload,
+                    removeCurrentPhoto,
+                    saveBodyEntry,
+                    deleteBodyEntry,
+                    unlockedTrophyToast,
+                    trophyList,
+                    unlockedTrophiesCount,
+                    trophyProgressPercent,
+                    getTierCount,
+                    getTrophyBorderClass,
+                    getTrophyIconBgClass,
+                    getTrophyBadgeClass
                 };
             }
         }).mount('#app');
