@@ -973,6 +973,91 @@
     <script>
         const { createApp, ref, computed, watch, onMounted, nextTick } = Vue;
 
+        // Categories Definition (Top-level to prevent ReferenceError / TDZ)
+        const CATEGORIES = [
+            { id: '胸', name: '胸', icon: 'fa-solid fa-shield-halved' },
+            { id: '背中', name: '背中', icon: 'fa-solid fa-child-reaching' },
+            { id: '腕', name: '腕', icon: 'fa-solid fa-hand-back-fist' },
+            { id: '腹', name: '腹', icon: 'fa-solid fa-bullseye' },
+            { id: '脚', name: '脚', icon: 'fa-solid fa-person-walking' },
+            { id: '肩', name: '肩', icon: 'fa-solid fa-arrows-up-down-left-right' },
+            { id: '自由/有酸素', name: '自由/有酸素', icon: 'fa-solid fa-person-running' }
+        ];
+
+        // Trophy Definition Master
+        const RAW_TROPHY_LIST = [
+            { id: 'first_workout', tier: 'bronze', icon: 'fa-solid fa-shoe-prints', title: 'はじめの一歩', desc: '初めてジムのトレーニングを記録した', target: 1, unit: '日' },
+            { id: 'streak_3', tier: 'bronze', icon: 'fa-solid fa-fire', title: '3日連続トレーニー', desc: '3日間連続でジムを記録した', target: 3, unit: '日連続' },
+            { id: 'cardio_5k', tier: 'bronze', icon: 'fa-solid fa-person-running', title: '有酸素デビュー', desc: '有酸素または走行の累計が5kmを突破', target: 5, unit: 'km' },
+            { id: 'swim_10', tier: 'bronze', icon: 'fa-solid fa-person-swimming', title: '初泳ぎ', desc: 'プールで通算10往復以上泳いだ', target: 10, unit: '往復' },
+            { id: 'studio_first', tier: 'bronze', icon: 'fa-solid fa-door-open', title: 'スタジオ初潜入', desc: '勇気を出してスタジオプログラムに初参加・記録した！', target: 1, unit: '回' },
+            { id: 'body_first', tier: 'bronze', icon: 'fa-solid fa-camera', title: 'ボディスナップ', desc: '身体の測定データまたは写真を初めて記録した', target: 1, unit: '回' },
+            { id: 'workout_10days', tier: 'silver', icon: 'fa-solid fa-calendar-check', title: '月間マスター', desc: '通算10日以上のジム記録を達成', target: 10, unit: '日' },
+            { id: 'ton_5', tier: 'silver', icon: 'fa-solid fa-weight-hanging', title: 'ゾウを持ち上げた男', desc: '筋トレの総挙上重量が5,000kg (5t) を突破！', target: 5000, unit: 'kg' },
+            { id: 'cardio_20k', tier: 'silver', icon: 'fa-solid fa-road', title: 'ハーフマラソンの領域', desc: '有酸素の累計距離が20kmを突破', target: 20, unit: 'km' },
+            { id: 'swim_50', tier: 'silver', icon: 'fa-solid fa-water', title: 'スイマーの目覚め', desc: 'プールで通算50往復を達成', target: 50, unit: '往復' },
+            { id: 'studio_variety_3', tier: 'silver', icon: 'fa-solid fa-music', title: 'スタジオチャレンジャー', desc: '臆せず3種類以上のスタジオプログラムに挑戦した！', target: 3, unit: '種目' },
+            { id: 'all_parts', tier: 'silver', icon: 'fa-solid fa-layer-group', title: 'バランスの求道者', desc: '胸・背中・腕・腹・脚・肩の全部位を記録した', target: 6, unit: '部位' },
+            { id: 'workout_30days', tier: 'gold', icon: 'fa-solid fa-award', title: '鉄人の意志', desc: '通算30日ジム記録達成！立派なアスリートの習慣', target: 30, unit: '日' },
+            { id: 'ton_25', tier: 'gold', icon: 'fa-solid fa-dumbbell', title: 'ヘラクレスの怪力', desc: '筋トレの総挙上重量が25,000kg (25t) を突破！', target: 25000, unit: 'kg' },
+            { id: 'marathon_42', tier: 'gold', icon: 'fa-solid fa-medal', title: 'フルマラソン踏破', desc: '有酸素の累計距離が42.195kmを突破！', target: 42, unit: 'km' },
+            { id: 'swim_100', tier: 'gold', icon: 'fa-solid fa-fish', title: '水中の魚', desc: 'プールで通算100往復 (5km) を達成！', target: 100, unit: '往復' },
+            { id: 'studio_10times', tier: 'gold', icon: 'fa-solid fa-people-group', title: 'スタジオの主（常連）', desc: 'スタジオプログラムに通算10回参加した！もはやスタジオの顔！', target: 10, unit: '回' },
+            { id: 'studio_all_star', tier: 'platinum', icon: 'fa-solid fa-star', title: 'スタジオコンプリート王', desc: '7種類以上の異なるスタジオプログラムを制覇した！', target: 7, unit: '種目' },
+            { id: 'fitlog_master', tier: 'platinum', icon: 'fa-solid fa-crown', title: 'FitLog Legend', desc: '他のトロフィーを12個以上獲得した真のジムマスター', target: 12, unit: '個' }
+        ];
+
+        // Studio Programs Constant List
+        const STUDIO_PROGRAM_NAMES = [
+            'Fine PILATES',
+            'ラダー Bee',
+            'ZUMBA',
+            'ボクシングビーストBULEファイト',
+            'ボクシングビーストMFCワークアウト',
+            'ボクシングビーストYELLOWモビリティ',
+            'バランスボール',
+            'エキサイトエアロ',
+            'フローリック',
+            'EJ☆Light',
+            'ターゲットアプス',
+            '夏のハタヨガ',
+            'ランランエアロ',
+            'Z-180'
+        ];
+
+        // Default Master Data
+        const DEFAULT_MASTER = [
+            { id: '1', name: 'チェストプレス', category: '胸', unitType: 'weight_reps', settingsNote: 'シート高さ: 3, グリップ位置: パラレル', defaultVal1: 30, defaultVal2: 10 },
+            { id: '2', name: 'ペックフライ', category: '胸', unitType: 'weight_reps', settingsNote: 'シート高さ: 2, アーム開き: 3番目', defaultVal1: 25, defaultVal2: 12 },
+            { id: '3', name: 'ラットプルダウン', category: '背中', unitType: 'weight_reps', settingsNote: '太もも固定パット: 上から2番目', defaultVal1: 35, defaultVal2: 10 },
+            { id: '4', name: 'シーテッドロー', category: '背中', unitType: 'weight_reps', settingsNote: 'チェストパット位置: 4', defaultVal1: 30, defaultVal2: 10 },
+            { id: '5', name: 'アブドミナルクランチ', category: '腹', unitType: 'weight_reps', settingsNote: '足の高さ: 2', defaultVal1: 25, defaultVal2: 15 },
+            { id: '6', name: 'レッグプレス', category: '脚', unitType: 'weight_reps', settingsNote: '背もたれ角度: 3番目', defaultVal1: 60, defaultVal2: 10 },
+            { id: '7', name: 'レッグエクステンション', category: '脚', unitType: 'weight_reps', settingsNote: '足首パット: 2, 背もたれ: 4', defaultVal1: 25, defaultVal2: 12 },
+            { id: '8', name: 'アームカール (ダンベル)', category: '腕', unitType: 'weight_reps', settingsNote: 'ベンチ角度: インクライン 60度', defaultVal1: 10, defaultVal2: 10 },
+            { id: '9', name: 'サイドレイズ', category: '肩', unitType: 'weight_reps', settingsNote: 'ダンベル小指側をやや高めに', defaultVal1: 6, defaultVal2: 15 },
+            { id: '10', name: 'トレッドミル (ランニング)', category: '自由/有酸素', unitType: 'distance_time', settingsNote: '傾斜: 1.5%, 速度: 9.0km/h', defaultVal1: 3.0, defaultVal2: 20 },
+            { id: '11', name: 'ウォーキング (ルームランナー)', category: '自由/有酸素', unitType: 'distance_time', settingsNote: '傾斜: 3.0%, 速度: 5.5km/h', defaultVal1: 2.0, defaultVal2: 25 },
+            { id: '12', name: 'プール (水泳・25m往復)', category: '自由/有酸素', unitType: 'swim', settingsNote: 'レーン: 完泳コース / クロール&平泳ぎ', defaultVal1: 10, defaultVal2: 30 },
+            { id: '13', name: 'エアロバイク', category: '自由/有酸素', unitType: 'distance_time', settingsNote: '負荷レベル: 6, サドル高さ: 4', defaultVal1: 5.0, defaultVal2: 15 },
+            { id: '14', name: 'ストレッチ・ポール', category: '自由/有酸素', unitType: 'time', settingsNote: '肩甲骨と股関節中心にほぐす', defaultVal1: 15, defaultVal2: 0 },
+            // Studio Programs (Default: 45 min)
+            { id: 'studio_1', name: 'Fine PILATES', category: '自由/有酸素', unitType: 'time', settingsNote: 'スタジオプログラム / 姿勢・体幹強化', defaultVal1: 45, defaultVal2: 0 },
+            { id: 'studio_2', name: 'ラダー Bee', category: '自由/有酸素', unitType: 'time', settingsNote: 'スタジオプログラム / アジリティ・ステップ', defaultVal1: 45, defaultVal2: 0 },
+            { id: 'studio_3', name: 'ZUMBA', category: '自由/有酸素', unitType: 'time', settingsNote: 'スタジオプログラム / ラテンダンスフィットネス', defaultVal1: 45, defaultVal2: 0 },
+            { id: 'studio_4', name: 'ボクシングビーストBULEファイト', category: '自由/有酸素', unitType: 'time', settingsNote: 'スタジオプログラム / 格闘技系・燃焼', defaultVal1: 45, defaultVal2: 0 },
+            { id: 'studio_5', name: 'ボクシングビーストMFCワークアウト', category: '自由/有酸素', unitType: 'time', settingsNote: 'スタジオプログラム / ファンクショナルトレーニング', defaultVal1: 45, defaultVal2: 0 },
+            { id: 'studio_6', name: 'ボクシングビーストYELLOWモビリティ', category: '自由/有酸素', unitType: 'time', settingsNote: 'スタジオプログラム / 可動域・コンディショニング', defaultVal1: 45, defaultVal2: 0 },
+            { id: 'studio_7', name: 'バランスボール', category: '自由/有酸素', unitType: 'time', settingsNote: 'スタジオプログラム / 体幹安定・バランス', defaultVal1: 45, defaultVal2: 0 },
+            { id: 'studio_8', name: 'エキサイトエアロ', category: '自由/有酸素', unitType: 'time', settingsNote: 'スタジオプログラム / ハイエナジーエアロビクス', defaultVal1: 45, defaultVal2: 0 },
+            { id: 'studio_9', name: 'フローリック', category: '自由/有酸素', unitType: 'time', settingsNote: 'スタジオプログラム / リズミカルワークアウト', defaultVal1: 45, defaultVal2: 0 },
+            { id: 'studio_10', name: 'EJ☆Light', category: '自由/有酸素', unitType: 'time', settingsNote: 'スタジオプログラム / 初級〜中級エアロダンス', defaultVal1: 45, defaultVal2: 0 },
+            { id: 'studio_11', name: 'ターゲットアプス', category: '自由/有酸素', unitType: 'time', settingsNote: 'スタジオプログラム / 腹筋集中追い込み', defaultVal1: 45, defaultVal2: 0 },
+            { id: 'studio_12', name: '夏のハタヨガ', category: '自由/有酸素', unitType: 'time', settingsNote: 'スタジオプログラム / 呼吸・柔軟性・リフレッシュ', defaultVal1: 45, defaultVal2: 0 },
+            { id: 'studio_13', name: 'ランランエアロ', category: '自由/有酸素', unitType: 'time', settingsNote: 'スタジオプログラム / 爽快ステップエアロ', defaultVal1: 45, defaultVal2: 0 },
+            { id: 'studio_14', name: 'Z-180', category: '自由/有酸素', unitType: 'time', settingsNote: 'スタジオプログラム / 高強度インターバルワークアウト', defaultVal1: 45, defaultVal2: 0 }
+        ];
+
         // Local date string helper (prevents UTC date shifts)
         const getLocalDateStr = (d = new Date()) => {
             const year = d.getFullYear();
@@ -1019,6 +1104,9 @@
 
         createApp({
             setup() {
+                // Categories Reference
+                const categories = ref(CATEGORIES);
+
                 // Application State
                 const activeTab = ref('workout');
                 const selectedDate = ref(getLocalDateStr());
@@ -1038,17 +1126,6 @@
                 const calendarYear = ref(new Date().getFullYear());
                 const calendarMonth = ref(new Date().getMonth());
 
-                // Categories Definition (胸, 背中, 腕, 腹, 脚, 肩, 自由/有酸素)
-                const categories = [
-                    { id: '胸', name: '胸', icon: 'fa-solid fa-shield-halved' },
-                    { id: '背中', name: '背中', icon: 'fa-solid fa-child-reaching' },
-                    { id: '腕', name: '腕', icon: 'fa-solid fa-hand-back-fist' },
-                    { id: '腹', name: '腹', icon: 'fa-solid fa-bullseye' },
-                    { id: '脚', name: '脚', icon: 'fa-solid fa-person-walking' },
-                    { id: '肩', name: '肩', icon: 'fa-solid fa-arrows-up-down-left-right' },
-                    { id: '自由/有酸素', name: '自由/有酸素', icon: 'fa-solid fa-person-running' }
-                ];
-
                 // Body Tracking State
                 const bodyLogs = ref({});
                 const currentBodyEntry = ref({
@@ -1065,48 +1142,8 @@
                 // Trophy Unlocking State
                 const unlockedTrophyToast = ref(null);
                 const unlockedTrophyIds = ref({});
-
-                const rawTrophyList = [
-                    // BRONZE
-                    { id: 'first_workout', tier: 'bronze', icon: 'fa-solid fa-shoe-prints', title: 'はじめの一歩', desc: '初めてジムのトレーニングを記録した', target: 1, unit: '日' },
-                    { id: 'streak_3', tier: 'bronze', icon: 'fa-solid fa-fire', title: '3日連続トレーニー', desc: '3日間連続でジムを記録した', target: 3, unit: '日連続' },
-                    { id: 'cardio_5k', tier: 'bronze', icon: 'fa-solid fa-person-running', title: '有酸素デビュー', desc: '有酸素または走行の累計が5kmを突破', target: 5, unit: 'km' },
-                    { id: 'swim_10', tier: 'bronze', icon: 'fa-solid fa-person-swimming', title: '初泳ぎ', desc: 'プールで通算10往復以上泳いだ', target: 10, unit: '往復' },
-                    { id: 'body_first', tier: 'bronze', icon: 'fa-solid fa-camera', title: 'ボディスナップ', desc: '身体の測定データまたは写真を初めて記録した', target: 1, unit: '回' },
-                    
-                    // SILVER
-                    { id: 'workout_10days', tier: 'silver', icon: 'fa-solid fa-calendar-check', title: '月間マスター', desc: '通算10日以上のジム記録を達成', target: 10, unit: '日' },
-                    { id: 'ton_5', tier: 'silver', icon: 'fa-solid fa-weight-hanging', title: 'ゾウを持ち上げた男', desc: '筋トレの総挙上重量が5,000kg (5t) を突破！', target: 5000, unit: 'kg' },
-                    { id: 'cardio_20k', tier: 'silver', icon: 'fa-solid fa-road', title: 'ハーフマラソンの領域', desc: '有酸素の累計距離が20kmを突破', target: 20, unit: 'km' },
-                    { id: 'swim_50', tier: 'silver', icon: 'fa-solid fa-water', title: 'スイマーの目覚め', desc: 'プールで通算50往復を達成', target: 50, unit: '往復' },
-                    { id: 'all_parts', tier: 'silver', icon: 'fa-solid fa-layer-group', title: 'バランスの求道者', desc: '胸・背中・腕・腹・脚・肩の全部位を記録した', target: 6, unit: '部位' },
-
-                    // GOLD
-                    { id: 'workout_30days', tier: 'gold', icon: 'fa-solid fa-award', title: '鉄人の意志', desc: '通算30日ジム記録達成！立派なアスリートの習慣', target: 30, unit: '日' },
-                    { id: 'ton_25', tier: 'gold', icon: 'fa-solid fa-dumbbell', title: 'ヘラクレスの怪力', desc: '筋トレの総挙上重量が25,000kg (25t) を突破！', target: 25000, unit: 'kg' },
-                    { id: 'marathon_42', tier: 'gold', icon: 'fa-solid fa-medal', title: 'フルマラソン踏破', desc: '有酸素の累計距離が42.195kmを突破！', target: 42, unit: 'km' },
-                    { id: 'swim_100', tier: 'gold', icon: 'fa-solid fa-fish', title: '水中の魚', desc: 'プールで通算100往復 (5km) を達成！', target: 100, unit: '往復' },
-
-                    // PLATINUM
-                    { id: 'fitlog_master', tier: 'platinum', icon: 'fa-solid fa-crown', title: 'FitLog Legend', desc: '他のトロフィーを10個以上獲得した真のジムマスター', target: 10, unit: '個' }
-                ];
-
-                const defaultMaster = [
-                    { id: '1', name: 'チェストプレス', category: '胸', unitType: 'weight_reps', settingsNote: 'シート高さ: 3, グリップ位置: パラレル', defaultVal1: 30, defaultVal2: 10 },
-                    { id: '2', name: 'ペックフライ', category: '胸', unitType: 'weight_reps', settingsNote: 'シート高さ: 2, アーム開き: 3番目', defaultVal1: 25, defaultVal2: 12 },
-                    { id: '3', name: 'ラットプルダウン', category: '背中', unitType: 'weight_reps', settingsNote: '太もも固定パット: 上から2番目', defaultVal1: 35, defaultVal2: 10 },
-                    { id: '4', name: 'シーテッドロー', category: '背中', unitType: 'weight_reps', settingsNote: 'チェストパット位置: 4', defaultVal1: 30, defaultVal2: 10 },
-                    { id: '5', name: 'アブドミナルクランチ', category: '腹', unitType: 'weight_reps', settingsNote: '足の高さ: 2', defaultVal1: 25, defaultVal2: 15 },
-                    { id: '6', name: 'レッグプレス', category: '脚', unitType: 'weight_reps', settingsNote: '背もたれ角度: 3番目', defaultVal1: 60, defaultVal2: 10 },
-                    { id: '7', name: 'レッグエクステンション', category: '脚', unitType: 'weight_reps', settingsNote: '足首パット: 2, 背もたれ: 4', defaultVal1: 25, defaultVal2: 12 },
-                    { id: '8', name: 'アームカール (ダンベル)', category: '腕', unitType: 'weight_reps', settingsNote: 'ベンチ角度: インクライン 60度', defaultVal1: 10, defaultVal2: 10 },
-                    { id: '9', name: 'サイドレイズ', category: '肩', unitType: 'weight_reps', settingsNote: 'ダンベル小指側をやや高めに', defaultVal1: 6, defaultVal2: 15 },
-                    { id: '10', name: 'トレッドミル (ランニング)', category: '自由/有酸素', unitType: 'distance_time', settingsNote: '傾斜: 1.5%, 速度: 9.0km/h', defaultVal1: 3.0, defaultVal2: 20 },
-                    { id: '11', name: 'ウォーキング (ルームランナー)', category: '自由/有酸素', unitType: 'distance_time', settingsNote: '傾斜: 3.0%, 速度: 5.5km/h', defaultVal1: 2.0, defaultVal2: 25 },
-                    { id: '12', name: 'プール (水泳・25m往復)', category: '自由/有酸素', unitType: 'swim', settingsNote: 'レーン: 完泳コース / クロール&平泳ぎ', defaultVal1: 10, defaultVal2: 30 },
-                    { id: '13', name: 'エアロバイク', category: '自由/有酸素', unitType: 'distance_time', settingsNote: '負荷レベル: 6, サドル高さ: 4', defaultVal1: 5.0, defaultVal2: 15 },
-                    { id: '14', name: 'ストレッチ・ポール', category: '自由/有酸素', unitType: 'time', settingsNote: '肩甲骨と股関節中心にほぐす', defaultVal1: 15, defaultVal2: 0 }
-                ];
+                const rawTrophyList = RAW_TROPHY_LIST;
+                const defaultMaster = DEFAULT_MASTER;
 
                 const exerciseMaster = ref([]);
                 const logs = ref({});
@@ -1174,7 +1211,20 @@
                 onMounted(() => {
                     const savedMaster = localStorage.getItem('fitlog_master_v2');
                     if (savedMaster) {
-                        try { exerciseMaster.value = JSON.parse(savedMaster); } catch(e) { exerciseMaster.value = defaultMaster; }
+                        try { 
+                            const loaded = JSON.parse(savedMaster);
+                            // 自動同期: まだマスタに含まれていないスタジオプログラムがあれば自動で追加
+                            defaultMaster.forEach(def => {
+                                if (!loaded.some(m => m.name === def.name)) {
+                                    loaded.push(def);
+                                }
+                            });
+                            exerciseMaster.value = loaded;
+                            saveMasterData();
+                        } catch(e) { 
+                            exerciseMaster.value = defaultMaster; 
+                            saveMasterData();
+                        }
                     } else {
                         exerciseMaster.value = defaultMaster;
                         saveMasterData();
@@ -1303,6 +1353,35 @@
                     return set.size;
                 });
 
+                // Studio Programs Analytics
+                const totalStudioSessions = computed(() => {
+                    let count = 0;
+                    Object.values(logs.value).forEach(log => {
+                        if (log.exercises) {
+                            log.exercises.forEach(ex => {
+                                if (STUDIO_PROGRAM_NAMES.includes(ex.name)) {
+                                    count += (ex.sets ? ex.sets.length : 1);
+                                }
+                            });
+                        }
+                    });
+                    return count;
+                });
+
+                const uniqueStudioProgramsCount = computed(() => {
+                    const participated = new Set();
+                    Object.values(logs.value).forEach(log => {
+                        if (log.exercises) {
+                            log.exercises.forEach(ex => {
+                                if (STUDIO_PROGRAM_NAMES.includes(ex.name)) {
+                                    participated.add(ex.name);
+                                }
+                            });
+                        }
+                    });
+                    return participated.size;
+                });
+
                 const maxWorkoutStreak = computed(() => {
                     const dates = Object.keys(logs.value)
                         .filter(k => logs.value[k].exercises && logs.value[k].exercises.length > 0)
@@ -1340,6 +1419,10 @@
                             case 'swim_10':
                             case 'swim_50':
                             case 'swim_100': currentProgress = totalSwimLaps.value; break;
+                            case 'studio_first':
+                            case 'studio_10times': currentProgress = totalStudioSessions.value; break;
+                            case 'studio_variety_3':
+                            case 'studio_all_star': currentProgress = uniqueStudioProgramsCount.value; break;
                             case 'body_first': currentProgress = recordedBodyCount.value; break;
                             case 'workout_10days':
                             case 'workout_30days': currentProgress = totalWorkoutDays.value; break;
