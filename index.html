@@ -125,9 +125,9 @@
 
             <!-- Quick Stats Header Badges -->
             <div class="flex items-center space-x-2 text-xs">
-                <div class="bg-slate-800 px-2.5 py-1.5 rounded-full border border-slate-700 flex items-center space-x-1">
+                <div class="bg-slate-800 px-2.5 py-1.5 rounded-full border border-slate-700 flex items-center space-x-1.5 shadow-sm">
                     <i class="fa-solid fa-trophy text-amber-400"></i>
-                    <span class="font-bold text-amber-400">{{ unlockedTrophiesCount }}</span>
+                    <span class="font-bold text-amber-400 font-mono text-sm">{{ unlockedTrophiesCount }}</span>
                     <span class="text-slate-400 text-[10px]">/ {{ allTrophiesList.length }}</span>
                 </div>
                 <div class="bg-slate-800 px-2.5 py-1.5 rounded-full border border-slate-700 flex items-center space-x-1">
@@ -554,26 +554,54 @@
                 <!-- Trophy Summary Header Card -->
                 <div class="bg-gradient-to-br from-slate-900 via-slate-850 to-slate-900 border border-amber-500/30 rounded-2xl p-4 shadow-xl space-y-3">
                     <div class="flex justify-between items-center">
-                        <div class="flex items-center gap-2">
-                            <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-xl border border-amber-500/30">
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-11 h-11 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-2xl border border-amber-500/30 shadow-inner">
                                 <i class="fa-solid fa-trophy"></i>
                             </div>
                             <div>
                                 <h2 class="font-bold text-slate-100 text-sm">アチーブメント / トロフィー</h2>
-                                <p class="text-[11px] text-slate-400">あなたの継続と成長の証</p>
+                                <p class="text-[11px] text-slate-400">獲得トロフィー総数</p>
                             </div>
                         </div>
 
                         <div class="text-right">
                             <span class="text-2xl font-black text-amber-400 font-mono">{{ unlockedTrophiesCount }}</span>
-                            <span class="text-xs text-slate-400"> / {{ allTrophiesList.length }}</span>
-                            <div class="text-[10px] text-slate-400">獲得率 {{ trophyProgressRate }}%</div>
+                            <span class="text-xs text-slate-400 font-medium"> / {{ allTrophiesList.length }} 個</span>
+                            <div class="text-[10px] text-emerald-400 font-semibold mt-0.5">獲得率 {{ trophyProgressRate }}%</div>
                         </div>
                     </div>
 
                     <!-- Progress Bar -->
                     <div class="w-full bg-slate-950 rounded-full h-2.5 overflow-hidden border border-slate-800">
                         <div class="bg-gradient-to-r from-amber-500 to-emerald-400 h-full rounded-full transition-all duration-500" :style="{ width: trophyProgressRate + '%' }"></div>
+                    </div>
+
+                    <!-- Grade Breakdown Badges (PS Style Trophy Counters) -->
+                    <div class="grid grid-cols-4 gap-2 pt-2 border-t border-slate-800/80 text-center">
+                        <div class="bg-slate-950/70 border border-sky-500/30 rounded-xl py-1.5 px-1 shadow-sm">
+                            <div class="text-[10px] text-sky-300 font-bold flex items-center justify-center gap-1">
+                                <i class="fa-solid fa-gem text-xs"></i> プラチナ
+                            </div>
+                            <div class="text-base font-black text-white font-mono mt-0.5">{{ platinumCount }}</div>
+                        </div>
+                        <div class="bg-slate-950/70 border border-amber-500/30 rounded-xl py-1.5 px-1 shadow-sm">
+                            <div class="text-[10px] text-amber-300 font-bold flex items-center justify-center gap-1">
+                                <i class="fa-solid fa-trophy text-xs"></i> ゴールド
+                            </div>
+                            <div class="text-base font-black text-amber-300 font-mono mt-0.5">{{ goldCount }}</div>
+                        </div>
+                        <div class="bg-slate-950/70 border border-slate-600 rounded-xl py-1.5 px-1 shadow-sm">
+                            <div class="text-[10px] text-slate-300 font-bold flex items-center justify-center gap-1">
+                                <i class="fa-solid fa-trophy text-xs"></i> シルバー
+                            </div>
+                            <div class="text-base font-black text-slate-200 font-mono mt-0.5">{{ silverCount }}</div>
+                        </div>
+                        <div class="bg-slate-950/70 border border-amber-800/50 rounded-xl py-1.5 px-1 shadow-sm">
+                            <div class="text-[10px] text-amber-500 font-bold flex items-center justify-center gap-1">
+                                <i class="fa-solid fa-trophy text-xs"></i> ブロンズ
+                            </div>
+                            <div class="text-base font-black text-amber-400 font-mono mt-0.5">{{ bronzeCount }}</div>
+                        </div>
                     </div>
                 </div>
 
@@ -876,8 +904,13 @@
                     <span class="text-[9px]">カレンダー</span>
                 </button>
 
-                <button @click="activeTab = 'trophies'" :class="['flex flex-col items-center gap-1 transition', activeTab === 'trophies' ? 'text-amber-400 font-bold' : 'text-slate-500 hover:text-slate-300']">
-                    <i class="fa-solid fa-trophy text-base"></i>
+                <button @click="activeTab = 'trophies'" :class="['relative flex flex-col items-center gap-1 transition', activeTab === 'trophies' ? 'text-amber-400 font-bold' : 'text-slate-500 hover:text-slate-300']">
+                    <div class="relative">
+                        <i class="fa-solid fa-trophy text-base"></i>
+                        <span v-if="unlockedTrophiesCount > 0" class="absolute -top-1.5 -right-3 bg-amber-500 text-slate-950 font-black text-[9px] px-1.5 py-0.2 rounded-full leading-tight font-mono shadow-sm">
+                            {{ unlockedTrophiesCount }}
+                        </span>
+                    </div>
                     <span class="text-[9px]">トロフィー</span>
                 </button>
 
@@ -1218,20 +1251,38 @@
                     return sum;
                 });
 
-                // Trophy Verification Logic
-                const checkTrophies = (triggerAnimation = true) => {
-                    const dates = Object.keys(logs.value).filter(k => logs.value[k].exercises && logs.value[k].exercises.length > 0).sort();
-                    const datesCount = dates.length;
+                // Helper to parse date string into timestamp
+                const parseDateToMs = (str) => {
+                    if (!str) return 0;
+                    const parts = str.split('-');
+                    return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2])).getTime();
+                };
 
-                    // Calculate max consecutive streak
-                    let maxStreak = 0;
+                // Trophy Verification Logic: Calculates ACTUAL historical achievement dates
+                const checkTrophies = (triggerAnimation = true) => {
+                    const sortedDates = Object.keys(logs.value)
+                        .filter(k => logs.value[k].exercises && logs.value[k].exercises.length > 0)
+                        .sort((a, b) => parseDateToMs(a) - parseDateToMs(b));
+
+                    const datesCount = sortedDates.length;
+                    const calculatedUnlocks = {}; // { trophyId: actualUnlockDateStr }
+
+                    // 1. First Step (Date of very first recorded workout)
+                    if (datesCount >= 1) {
+                        calculatedUnlocks['t_first_step'] = sortedDates[0];
+                    }
+
+                    // 2. Streaks (3 days and 7 days)
                     let currentStreak = 0;
-                    for (let i = 0; i < dates.length; i++) {
+                    let streak3Date = null;
+                    let streak7Date = null;
+
+                    for (let i = 0; i < sortedDates.length; i++) {
                         if (i === 0) {
                             currentStreak = 1;
                         } else {
-                            const prev = new Date(dates[i - 1]);
-                            const curr = new Date(dates[i]);
+                            const prev = new Date(sortedDates[i - 1].replace(/-/g, '/'));
+                            const curr = new Date(sortedDates[i].replace(/-/g, '/'));
                             const diffDays = Math.round((curr - prev) / (1000 * 60 * 60 * 24));
                             if (diffDays === 1) {
                                 currentStreak++;
@@ -1239,95 +1290,141 @@
                                 currentStreak = 1;
                             }
                         }
-                        if (currentStreak > maxStreak) maxStreak = currentStreak;
+                        if (currentStreak >= 3 && !streak3Date) streak3Date = sortedDates[i];
+                        if (currentStreak >= 7 && !streak7Date) streak7Date = sortedDates[i];
                     }
+                    if (streak3Date) calculatedUnlocks['t_streak_3'] = streak3Date;
+                    if (streak7Date) calculatedUnlocks['t_streak_7'] = streak7Date;
 
-                    // Total swims
-                    let totalSwimLaps = 0;
-                    Object.values(logs.value).forEach(log => {
-                        if (log.exercises) {
-                            log.exercises.forEach(ex => {
-                                if (ex.unitType === 'swim' && ex.sets) {
-                                    ex.sets.forEach(s => { totalSwimLaps += (s.val1 || 0); });
-                                }
-                            });
-                        }
-                    });
-
-                    // Studio participation
-                    let studioTotalCount = 0;
+                    // 3. Historical walk-through to find exact date of cumulative goals
+                    let runDist = 0;
+                    let runLift = 0;
+                    let runSwim = 0;
+                    let studioTotal = 0;
                     const studioTypes = new Set();
-                    Object.values(logs.value).forEach(log => {
-                        if (log.exercises) {
-                            log.exercises.forEach(ex => {
-                                if (STUDIO_PROGRAM_NAMES.includes(ex.name)) {
-                                    studioTotalCount += (ex.sets ? ex.sets.length : 1);
-                                    studioTypes.add(ex.name);
+
+                    sortedDates.forEach(dStr => {
+                        const dayLog = logs.value[dStr];
+                        if (!dayLog || !dayLog.exercises) return;
+
+                        dayLog.exercises.forEach(ex => {
+                            // Weight Lifted
+                            if (ex.unitType === 'weight_reps' && ex.sets) {
+                                ex.sets.forEach(s => {
+                                    runLift += (s.val1 || 0) * (s.val2 || 0);
+                                });
+                            }
+                            // Cardio Distance (Only distance_time)
+                            if (ex.unitType === 'distance_time' && ex.sets) {
+                                ex.sets.forEach(s => {
+                                    runDist += (s.val1 || 0);
+                                });
+                            }
+                            // Swimming Laps
+                            if (ex.unitType === 'swim' && ex.sets) {
+                                ex.sets.forEach(s => {
+                                    runSwim += (s.val1 || 0);
+                                });
+                            }
+                            // Studio Program checks
+                            if (STUDIO_PROGRAM_NAMES.includes(ex.name)) {
+                                studioTotal += (ex.sets ? ex.sets.length : 1);
+                                studioTypes.add(ex.name);
+                                if (!calculatedUnlocks['t_studio_debut']) {
+                                    calculatedUnlocks['t_studio_debut'] = dStr;
                                 }
-                            });
+                                if (studioTypes.size >= 3 && !calculatedUnlocks['t_studio_challenger']) {
+                                    calculatedUnlocks['t_studio_challenger'] = dStr;
+                                }
+                                if (studioTotal >= 10 && !calculatedUnlocks['t_studio_master']) {
+                                    calculatedUnlocks['t_studio_master'] = dStr;
+                                }
+                                if (studioTypes.size >= 7 && !calculatedUnlocks['t_studio_king']) {
+                                    calculatedUnlocks['t_studio_king'] = dStr;
+                                }
+                            }
+                        });
+
+                        // Check cumulative thresholds on this day
+                        if (runDist >= 5.0 && !calculatedUnlocks['t_cardio_debut']) {
+                            calculatedUnlocks['t_cardio_debut'] = dStr;
+                        }
+                        if (runDist >= 42.195 && !calculatedUnlocks['t_marathon']) {
+                            calculatedUnlocks['t_marathon'] = dStr;
+                        }
+                        if (runLift >= 5000 && !calculatedUnlocks['t_elephant_lift']) {
+                            calculatedUnlocks['t_elephant_lift'] = dStr;
+                        }
+                        if (runLift >= 20000 && !calculatedUnlocks['t_whale_lift']) {
+                            calculatedUnlocks['t_whale_lift'] = dStr;
+                        }
+                        if (runSwim >= 10 && !calculatedUnlocks['t_first_swim']) {
+                            calculatedUnlocks['t_first_swim'] = dStr;
+                        }
+                        if (runSwim >= 100 && !calculatedUnlocks['t_water_fish']) {
+                            calculatedUnlocks['t_water_fish'] = dStr;
                         }
                     });
 
-                    // Has body data
-                    const hasBodyData = Object.keys(bodyRecords.value).length > 0;
-
-                    // Condition checks
-                    const conditions = {
-                        't_first_step': datesCount >= 1,
-                        't_streak_3': maxStreak >= 3,
-                        't_cardio_debut': totalCardioDistance.value >= 5.0,
-                        't_first_swim': totalSwimLaps >= 10,
-                        't_body_snap': hasBodyData,
-                        't_studio_debut': studioTotalCount >= 1,
-
-                        't_month_10': datesCount >= 10,
-                        't_elephant_lift': totalLiftedWeight.value >= 5000,
-                        't_water_fish': totalSwimLaps >= 100,
-                        't_studio_challenger': studioTypes.size >= 3,
-                        't_streak_7': maxStreak >= 7,
-
-                        't_days_30': datesCount >= 30,
-                        't_marathon': totalCardioDistance.value >= 42.195,
-                        't_whale_lift': totalLiftedWeight.value >= 20000,
-                        't_studio_master': studioTotalCount >= 10,
-
-                        't_studio_king': studioTypes.size >= 7,
-                    };
-
-                    // Evaluate non-platinum
-                    Object.keys(conditions).forEach(tId => {
-                        if (conditions[tId] && !trophies.value[tId]) {
-                            unlockTrophy(tId, triggerAnimation);
-                        }
-                    });
-
-                    // Platinum Legend evaluation
-                    const currentUnlockedCount = Object.keys(trophies.value).filter(k => k !== 't_platinum_legend').length;
-                    if (currentUnlockedCount >= 10 && !trophies.value['t_platinum_legend']) {
-                        unlockTrophy('t_platinum_legend', triggerAnimation);
+                    // 4. Workout count days
+                    if (datesCount >= 10) {
+                        calculatedUnlocks['t_month_10'] = sortedDates[9];
                     }
+                    if (datesCount >= 30) {
+                        calculatedUnlocks['t_days_30'] = sortedDates[29];
+                    }
+
+                    // 5. Body Measurement Snap
+                    const bodyDates = Object.keys(bodyRecords.value).sort();
+                    if (bodyDates.length > 0) {
+                        calculatedUnlocks['t_body_snap'] = bodyDates[0];
+                    }
+
+                    // 6. Check Platinum Legend
+                    const normalUnlockedKeys = Object.keys(calculatedUnlocks).filter(k => k !== 't_platinum_legend');
+                    if (normalUnlockedKeys.length >= 10) {
+                        calculatedUnlocks['t_platinum_legend'] = getLocalDateStr();
+                    }
+
+                    // Apply newly unlocked trophies and fix any inaccurate "today" dates
+                    let newlyUnlockedTrophyObj = null;
+
+                    Object.keys(calculatedUnlocks).forEach(tId => {
+                        const correctDate = calculatedUnlocks[tId];
+                        const hadTrophy = !!trophies.value[tId];
+
+                        // If not had, or had with wrong fallback date, set to actual historical date
+                        if (!hadTrophy) {
+                            trophies.value[tId] = correctDate;
+                            if (triggerAnimation && !newlyUnlockedTrophyObj) {
+                                newlyUnlockedTrophyObj = RAW_TROPHY_LIST.find(t => t.id === tId);
+                            }
+                        } else if (trophies.value[tId] !== correctDate && !trophies.value[tId]?.startsWith('20')) {
+                            trophies.value[tId] = correctDate;
+                        }
+                    });
+
+                    // If conditions are no longer met (e.g. false cardio calculation fixed), remove it
+                    Object.keys(trophies.value).forEach(tId => {
+                        if (!calculatedUnlocks[tId]) {
+                            delete trophies.value[tId];
+                        }
+                    });
 
                     localStorage.setItem('fitlog_trophies_v2', JSON.stringify(trophies.value));
-                };
 
-                const unlockTrophy = (id, triggerAnimation) => {
-                    const todayStr = getLocalDateStr();
-                    trophies.value[id] = todayStr;
-
-                    if (triggerAnimation) {
-                        const tObj = RAW_TROPHY_LIST.find(t => t.id === id);
-                        if (tObj) {
-                            activeTrophyNotice.value = tObj;
-                            playTrophySound();
-                            if (window.confetti) {
-                                confetti({ particleCount: 50, spread: 70, origin: { y: 0.2 } });
-                            }
-                            setTimeout(() => {
-                                if (activeTrophyNotice.value?.id === id) {
-                                    activeTrophyNotice.value = null;
-                                }
-                            }, 4500);
+                    // Trigger PS Trophy Popup animation if a new trophy was achieved right now
+                    if (newlyUnlockedTrophyObj && triggerAnimation) {
+                        activeTrophyNotice.value = newlyUnlockedTrophyObj;
+                        playTrophySound();
+                        if (window.confetti) {
+                            confetti({ particleCount: 50, spread: 70, origin: { y: 0.2 } });
                         }
+                        setTimeout(() => {
+                            if (activeTrophyNotice.value?.id === newlyUnlockedTrophyObj.id) {
+                                activeTrophyNotice.value = null;
+                            }
+                        }, 4500);
                     }
                 };
 
@@ -1338,6 +1435,35 @@
                 const allTrophiesList = computed(() => RAW_TROPHY_LIST);
                 const trophyProgressRate = computed(() => {
                     return Math.round((unlockedTrophiesCount.value / RAW_TROPHY_LIST.length) * 100) || 0;
+                });
+
+                // Tier-based trophy counts for PS style overview
+                const bronzeCount = computed(() => {
+                    return Object.keys(trophies.value).filter(id => {
+                        const t = RAW_TROPHY_LIST.find(item => item.id === id);
+                        return t && t.tier === 'bronze';
+                    }).length;
+                });
+
+                const silverCount = computed(() => {
+                    return Object.keys(trophies.value).filter(id => {
+                        const t = RAW_TROPHY_LIST.find(item => item.id === id);
+                        return t && t.tier === 'silver';
+                    }).length;
+                });
+
+                const goldCount = computed(() => {
+                    return Object.keys(trophies.value).filter(id => {
+                        const t = RAW_TROPHY_LIST.find(item => item.id === id);
+                        return t && t.tier === 'gold';
+                    }).length;
+                });
+
+                const platinumCount = computed(() => {
+                    return Object.keys(trophies.value).filter(id => {
+                        const t = RAW_TROPHY_LIST.find(item => item.id === id);
+                        return t && t.tier === 'platinum';
+                    }).length;
                 });
 
                 const getTrophyProgressHint = (t) => {
@@ -1952,6 +2078,10 @@
                     unlockedTrophiesCount,
                     allTrophiesList,
                     trophyProgressRate,
+                    bronzeCount,
+                    silverCount,
+                    goldCount,
+                    platinumCount,
                     currentBodyRecord,
                     bodyHistoryListWithPhotos,
                     oldestBodyPhotoRecord,
