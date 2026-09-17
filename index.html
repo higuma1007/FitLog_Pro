@@ -159,6 +159,49 @@
                     </button>
                 </div>
 
+                <!-- Gym Stay Time (Check-in & Check-out) Card -->
+                <div class="bg-cardbg rounded-2xl p-3.5 border border-borderbg shadow-sm space-y-2.5">
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                            <i class="fa-regular fa-clock text-amber-400"></i>
+                            ジム滞在時間 (入館 / 退館)
+                        </span>
+                        <span v-if="stayDurationText" class="text-xs font-bold text-emerald-400 bg-emerald-950/70 border border-emerald-700/60 px-2.5 py-0.5 rounded-full font-mono shadow-sm">
+                            ⏱ 滞在: {{ stayDurationText }}
+                        </span>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2.5">
+                        <!-- Check-in Time -->
+                        <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5 space-y-1">
+                            <div class="flex justify-between items-center">
+                                <span class="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
+                                    <i class="fa-solid fa-arrow-right-to-bracket text-emerald-400 text-[10px]"></i>
+                                    到着 (IN)
+                                </span>
+                                <button type="button" @click="setTimeToNow('startTime')" class="text-[10px] font-bold text-amber-400 bg-amber-950/50 hover:bg-amber-900/60 border border-amber-800/60 px-2 py-0.5 rounded-md transition active:scale-95">
+                                    今IN
+                                </button>
+                            </div>
+                            <input type="time" v-model="currentDailyLog.startTime" @change="saveLogsToStorage" class="w-full bg-slate-950 border border-slate-800 text-slate-100 font-mono font-bold text-sm text-center rounded-lg py-1.5 outline-none focus:border-emerald-500 cursor-pointer">
+                        </div>
+
+                        <!-- Check-out Time -->
+                        <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5 space-y-1">
+                            <div class="flex justify-between items-center">
+                                <span class="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
+                                    <i class="fa-solid fa-arrow-right-from-bracket text-rose-400 text-[10px]"></i>
+                                    退館 (OUT)
+                                </span>
+                                <button type="button" @click="setTimeToNow('endTime')" class="text-[10px] font-bold text-amber-400 bg-amber-950/50 hover:bg-amber-900/60 border border-amber-800/60 px-2 py-0.5 rounded-md transition active:scale-95">
+                                    今OUT
+                                </button>
+                            </div>
+                            <input type="time" v-model="currentDailyLog.endTime" @change="saveLogsToStorage" class="w-full bg-slate-950 border border-slate-800 text-slate-100 font-mono font-bold text-sm text-center rounded-lg py-1.5 outline-none focus:border-emerald-500 cursor-pointer">
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Add / Select Exercise Section -->
                 <div class="bg-cardbg rounded-2xl p-4 border border-borderbg space-y-4 shadow-md">
                     <div class="flex justify-between items-center">
@@ -533,6 +576,19 @@
                     </div>
 
                     <div v-else class="space-y-2">
+                        <div v-if="currentDailyLog.startTime || currentDailyLog.endTime" class="bg-slate-900/90 p-2 rounded-xl text-xs flex justify-between items-center border border-slate-800">
+                            <span class="text-slate-400 font-medium flex items-center gap-1.5">
+                                <i class="fa-regular fa-clock text-amber-400"></i>
+                                利用時間
+                            </span>
+                            <div class="font-mono text-slate-200">
+                                <span>{{ currentDailyLog.startTime || '--:--' }}</span>
+                                <span class="text-slate-500 mx-1">〜</span>
+                                <span>{{ currentDailyLog.endTime || '--:--' }}</span>
+                                <span v-if="stayDurationText" class="text-emerald-400 font-bold ml-2">({{ stayDurationText }})</span>
+                            </div>
+                        </div>
+
                         <div v-for="(ex, eI) in currentDailyLog.exercises" :key="eI" class="bg-slate-900 p-2.5 rounded-xl text-xs flex justify-between items-center border border-slate-800">
                             <div>
                                 <span class="font-bold text-slate-200">{{ ex.name }}</span>
@@ -1183,9 +1239,14 @@
                     if (!logs.value[dateStr]) {
                         logs.value[dateStr] = {
                             date: dateStr,
+                            startTime: '',
+                            endTime: '',
                             exercises: [],
                             memo: ''
                         };
+                    } else {
+                        if (logs.value[dateStr].startTime === undefined) logs.value[dateStr].startTime = '';
+                        if (logs.value[dateStr].endTime === undefined) logs.value[dateStr].endTime = '';
                     }
                 };
 
@@ -1193,6 +1254,33 @@
                     ensureDailyLogExists(selectedDate.value);
                     return logs.value[selectedDate.value];
                 });
+
+                // Calculate stay duration (e.g., "1時間30分間" or "45分間")
+                const stayDurationText = computed(() => {
+                    const start = currentDailyLog.value?.startTime;
+                    const end = currentDailyLog.value?.endTime;
+                    if (!start || !end) return '';
+
+                    const [sH, sM] = start.split(':').map(Number);
+                    const [eH, eM] = end.split(':').map(Number);
+                    let diffMin = (eH * 60 + eM) - (sH * 60 + sM);
+                    if (diffMin < 0) diffMin += 24 * 60; // Handle midnight crossing
+
+                    const h = Math.floor(diffMin / 60);
+                    const m = diffMin % 60;
+                    if (h === 0) return `${m}分間`;
+                    return `${h}時間${m > 0 ? ` ${m}分間` : ''}`;
+                });
+
+                // Helper to quickly record current time for check-in / check-out
+                const setTimeToNow = (field) => {
+                    const now = new Date();
+                    const hours = String(now.getHours()).padStart(2, '0');
+                    const minutes = String(now.getMinutes()).padStart(2, '0');
+                    currentDailyLog.value[field] = `${hours}:${minutes}`;
+                    saveLogsToStorage();
+                    showNotification(field === 'startTime' ? `到着時刻 (${hours}:${minutes}) を記録しました` : `退館時刻 (${hours}:${minutes}) を記録しました`);
+                };
 
                 const formattedSelectedDateLabel = computed(() => {
                     if (!selectedDate.value) return '';
@@ -1842,6 +1930,8 @@
 
                     logs.value[targetCopyDate.value] = {
                         date: targetCopyDate.value,
+                        startTime: source.startTime || '',
+                        endTime: source.endTime || '',
                         exercises: JSON.parse(JSON.stringify(source.exercises || [])),
                         memo: source.memo ? `(複製: ${source.date}) ${source.memo}` : ''
                     };
@@ -1860,7 +1950,7 @@
 
                 // CSV Export (Rule 6 - With Trophy Metadata preserving unlock dates)
                 const exportCSV = () => {
-                    let csvContent = "\uFEFF日付,部位,種目名,形式,セット番号,値1(kg/km/往復/分),値2(回/分),種目メモ,全体メモ\n";
+                    let csvContent = "\uFEFF日付,部位,種目名,形式,セット番号,値1(kg/km/往復/分),値2(回/分),種目メモ,全体メモ,到着時刻,退館時刻\n";
 
                     Object.keys(logs.value).sort().forEach(date => {
                         const dayLog = logs.value[date];
@@ -1876,7 +1966,9 @@
                                         set.val1 !== undefined ? set.val1 : (set.weight || 0),
                                         set.val2 !== undefined ? set.val2 : (set.reps || 0),
                                         `"${(ex.note || '').replace(/"/g, '""')}"`,
-                                        `"${(dayLog.memo || '').replace(/"/g, '""')}"`
+                                        `"${(dayLog.memo || '').replace(/"/g, '""')}"`,
+                                        `"${dayLog.startTime || ''}"`,
+                                        `"${dayLog.endTime || ''}"`
                                     ];
                                     csvContent += row.join(",") + "\n";
                                 });
@@ -1930,9 +2022,11 @@
                             if (parts && parts.length >= 6) {
                                 const clean = parts.map(p => p.replace(/^"|"$/g, '').trim());
                                 
-                                let date, category, name, unitType, setNum, val1, val2, exNote, dayMemo;
+                                let date, category, name, unitType, setNum, val1, val2, exNote, dayMemo, startTime, endTime;
 
-                                if (parts.length >= 9) {
+                                if (parts.length >= 11) {
+                                    [date, category, name, unitType, setNum, val1, val2, exNote, dayMemo, startTime, endTime] = clean;
+                                } else if (parts.length >= 9) {
                                     [date, category, name, unitType, setNum, val1, val2, exNote, dayMemo] = clean;
                                 } else {
                                     [date, category, name, setNum, val1, val2, exNote, dayMemo] = clean;
@@ -1954,7 +2048,16 @@
                                     }
 
                                     if (!logs.value[date]) {
-                                        logs.value[date] = { date, exercises: [], memo: dayMemo || '' };
+                                        logs.value[date] = { 
+                                            date, 
+                                            startTime: startTime || '', 
+                                            endTime: endTime || '', 
+                                            exercises: [], 
+                                            memo: dayMemo || '' 
+                                        };
+                                    } else {
+                                        if (startTime && !logs.value[date].startTime) logs.value[date].startTime = startTime;
+                                        if (endTime && !logs.value[date].endTime) logs.value[date].endTime = endTime;
                                     }
 
                                     let ex = logs.value[date].exercises.find(e => e.name === name);
@@ -2086,6 +2189,8 @@
                     bodyHistoryListWithPhotos,
                     oldestBodyPhotoRecord,
                     latestBodyPhotoRecord,
+                    stayDurationText,
+                    setTimeToNow,
                     getUnitTypeLabel,
                     getTierLabel,
                     formatSetDisplay,
