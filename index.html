@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>FitLog Pro - ジム記録＆モチベーション管理</title>
+    <title>FitLog Pro - ジム記録＆スタジオ称号システム</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -119,7 +119,7 @@
                 </div>
                 <div>
                     <h1 class="font-bold text-lg leading-none bg-gradient-to-r from-emerald-400 to-green-300 bg-clip-text text-transparent">FitLog Pro</h1>
-                    <span class="text-[10px] text-slate-400">ジム・有酸素・プール記録＆モチベーション管理</span>
+                    <span class="text-[10px] text-slate-400">ジム・有酸素・プール＆スタジオ称号管理</span>
                 </div>
             </div>
 
@@ -209,7 +209,7 @@
                             <i class="fa-solid fa-plus-circle text-emerald-400"></i>
                             種目を選択・追加
                         </h2>
-                        <span class="text-xs text-slate-400">自動で前回の記録が反映されます</span>
+                        <span class="text-xs text-slate-400">前回の記録＆参加回数を自動反映</span>
                     </div>
 
                     <!-- Category Selector Pills -->
@@ -239,6 +239,18 @@
                             <i class="fa-solid fa-chevron-down absolute right-3 top-3.5 text-slate-400 pointer-events-none text-xs"></i>
                         </div>
 
+                        <!-- Special Studio Status Badge when a Studio program is selected -->
+                        <div v-if="selectedStudioProgramInfo" class="bg-gradient-to-r from-purple-950/70 to-indigo-950/70 border border-purple-500/40 rounded-xl p-2.5 flex items-center justify-between text-xs">
+                            <div class="flex items-center gap-2">
+                                <span class="bg-purple-600 text-white text-[10px] font-bold px-2 py-0.5 rounded">スタジオ</span>
+                                <span class="text-slate-200 font-semibold">通算参加: <span class="text-amber-400 font-bold font-mono text-sm">{{ selectedStudioProgramInfo.count }}</span> 回</span>
+                            </div>
+                            <div class="text-[11px] text-amber-300 font-medium flex items-center gap-1">
+                                <i class="fa-solid fa-medal"></i>
+                                <span>現在の称号: {{ selectedStudioProgramInfo.currentTitle }}</span>
+                            </div>
+                        </div>
+
                         <!-- Or Custom Exercise Input -->
                         <div class="flex gap-2 flex-wrap sm:flex-nowrap">
                             <input type="text" v-model="customExerciseInput" placeholder="新規種目を入力..." class="flex-1 bg-slate-900 border border-slate-700 text-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-emerald-500 min-w-[140px]">
@@ -256,7 +268,7 @@
                         </div>
                     </div>
 
-                    <!-- Machine Setting Note for Current Exercise (Rule 8) -->
+                    <!-- Machine Setting Note for Current Exercise -->
                     <div v-if="currentExerciseMaster" class="bg-slate-900/80 border border-slate-800 rounded-xl p-3 text-xs space-y-2">
                         <div class="flex justify-between items-center text-amber-400 font-semibold">
                             <span class="flex items-center gap-1.5">
@@ -276,7 +288,7 @@
                         </div>
                     </div>
 
-                    <!-- Exercise Entry Form (Rule 1, 7, 10 - Quick Increment & Previous Copy) -->
+                    <!-- Exercise Entry Form -->
                     <div v-if="activeWorkingExercise" class="bg-slate-900 rounded-xl p-3 border border-emerald-500/30 space-y-3">
                         <div class="flex flex-wrap justify-between items-center border-b border-slate-800 pb-2 gap-2">
                             <div class="flex items-center gap-1.5">
@@ -305,14 +317,14 @@
                             </div>
                         </div>
 
-                        <!-- Quick Increment Bar (Adaptive based on Unit Type) -->
+                        <!-- Quick Increment Bar -->
                         <div class="space-y-1">
                             <label class="text-[11px] text-slate-400 font-medium flex items-center justify-between">
                                 <span>クイック微調整ボタン</span>
                                 <span class="text-[10px] text-slate-500">ワンタップで加算/減算</span>
                             </label>
 
-                            <!-- 1. For Weight/Reps -->
+                            <!-- Weight/Reps -->
                             <div v-if="activeWorkingExercise.unitType === 'weight_reps'" class="grid grid-cols-5 gap-1.5">
                                 <button @click="adjustPrimaryValue(-2.5)" class="bg-slate-800 hover:bg-slate-700 text-slate-300 py-1.5 rounded-lg text-xs font-bold active:scale-95 transition border border-slate-700">-2.5kg</button>
                                 <button @click="adjustPrimaryValue(-1)" class="bg-slate-800 hover:bg-slate-700 text-slate-300 py-1.5 rounded-lg text-xs font-bold active:scale-95 transition border border-slate-700">-1kg</button>
@@ -321,7 +333,7 @@
                                 <button @click="adjustPrimaryValue(5)" class="bg-emerald-950 hover:bg-emerald-900 text-emerald-300 py-1.5 rounded-lg text-xs font-bold active:scale-95 transition border border-emerald-800/60">+5kg</button>
                             </div>
 
-                            <!-- 2. For Distance/Time (Run/Walk) -->
+                            <!-- Distance/Time -->
                             <div v-else-if="activeWorkingExercise.unitType === 'distance_time'" class="grid grid-cols-5 gap-1.5">
                                 <button @click="adjustPrimaryValue(-0.5)" class="bg-slate-800 hover:bg-slate-700 text-slate-300 py-1.5 rounded-lg text-xs font-bold active:scale-95 transition border border-slate-700">-0.5km</button>
                                 <button @click="adjustPrimaryValue(0.5)" class="bg-emerald-950 hover:bg-emerald-900 text-emerald-300 py-1.5 rounded-lg text-xs font-bold active:scale-95 transition border border-emerald-800/60">+0.5km</button>
@@ -330,7 +342,7 @@
                                 <button @click="adjustSecondaryValue(10)" class="bg-sky-950 hover:bg-sky-900 text-sky-300 py-1.5 rounded-lg text-xs font-bold active:scale-95 transition border border-sky-800/60">+10分</button>
                             </div>
 
-                            <!-- 3. For Swim (Pool) -->
+                            <!-- Swim -->
                             <div v-else-if="activeWorkingExercise.unitType === 'swim'" class="grid grid-cols-5 gap-1.5">
                                 <button @click="adjustPrimaryValue(-2)" class="bg-slate-800 hover:bg-slate-700 text-slate-300 py-1.5 rounded-lg text-xs font-bold active:scale-95 transition border border-slate-700">-2往復</button>
                                 <button @click="adjustPrimaryValue(1)" class="bg-cyan-950 hover:bg-cyan-900 text-cyan-300 py-1.5 rounded-lg text-xs font-bold active:scale-95 transition border border-cyan-800/60">+1本(25m)</button>
@@ -339,7 +351,7 @@
                                 <button @click="adjustSecondaryValue(5)" class="bg-sky-950 hover:bg-sky-900 text-sky-300 py-1.5 rounded-lg text-xs font-bold active:scale-95 transition border border-sky-800/60">+5分</button>
                             </div>
 
-                            <!-- 4. For Time only -->
+                            <!-- Time only -->
                             <div v-else class="grid grid-cols-4 gap-1.5">
                                 <button @click="adjustPrimaryValue(-5)" class="bg-slate-800 hover:bg-slate-700 text-slate-300 py-1.5 rounded-lg text-xs font-bold active:scale-95 transition border border-slate-700">-5分</button>
                                 <button @click="adjustPrimaryValue(5)" class="bg-emerald-950 hover:bg-emerald-900 text-emerald-300 py-1.5 rounded-lg text-xs font-bold active:scale-95 transition border border-emerald-800/60">+5分</button>
@@ -348,7 +360,7 @@
                             </div>
                         </div>
 
-                        <!-- Sets Input Table with Dynamic Headers -->
+                        <!-- Sets Input Table -->
                         <div class="space-y-2">
                             <div class="grid grid-cols-12 gap-2 text-[11px] text-slate-400 font-semibold px-1 text-center items-center">
                                 <span class="col-span-2">セット</span>
@@ -431,7 +443,7 @@
                         </div>
 
                         <!-- Exercise Memo -->
-                        <input type="text" v-model="activeWorkingExercise.note" placeholder="この種目のメモ (例: ペース維持、呼吸意識、心拍数130目安)" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-emerald-500">
+                        <input type="text" v-model="activeWorkingExercise.note" placeholder="この種目のメモ (例: 呼吸意識、動きを大きく、発汗良好)" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-emerald-500">
 
                         <!-- Confirm Add to Today's Log -->
                         <button @click="saveExerciseToDailyLog" class="w-full bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-500 hover:to-green-400 text-white font-bold py-3 rounded-xl shadow-lg shadow-emerald-900/30 active:scale-98 transition flex items-center justify-center gap-2 text-sm">
@@ -481,7 +493,7 @@
                                 </div>
                             </div>
 
-                            <!-- Sets summary tags (Smart Formatted based on unitType) -->
+                            <!-- Sets summary tags -->
                             <div class="flex flex-wrap gap-1.5 pt-1">
                                 <div v-for="(s, sI) in ex.sets" :key="sI" class="bg-slate-950 border border-slate-800 px-2.5 py-1 rounded-lg text-xs font-mono font-medium text-slate-300">
                                     <span class="text-slate-500 mr-1">#{{ sI + 1 }}</span>
@@ -615,7 +627,7 @@
                                 <i class="fa-solid fa-trophy"></i>
                             </div>
                             <div>
-                                <h2 class="font-bold text-slate-100 text-sm">アチーブメント / トロフィー</h2>
+                                <h2 class="font-bold text-slate-100 text-sm">アチーブメント / 称号</h2>
                                 <p class="text-[11px] text-slate-400">獲得トロフィー総数</p>
                             </div>
                         </div>
@@ -632,7 +644,7 @@
                         <div class="bg-gradient-to-r from-amber-500 to-emerald-400 h-full rounded-full transition-all duration-500" :style="{ width: trophyProgressRate + '%' }"></div>
                     </div>
 
-                    <!-- Grade Breakdown Badges (PS Style Trophy Counters) -->
+                    <!-- Grade Breakdown Badges -->
                     <div class="grid grid-cols-4 gap-2 pt-2 border-t border-slate-800/80 text-center">
                         <div class="bg-slate-950/70 border border-sky-500/30 rounded-xl py-1.5 px-1 shadow-sm">
                             <div class="text-[10px] text-sky-300 font-bold flex items-center justify-center gap-1">
@@ -661,9 +673,21 @@
                     </div>
                 </div>
 
+                <!-- Trophy Category Filter Tabs -->
+                <div class="flex gap-2 border-b border-borderbg pb-2 text-xs font-bold">
+                    <button @click="trophyFilterMode = 'general'" :class="['px-3 py-1.5 rounded-xl transition flex items-center gap-1.5', trophyFilterMode === 'general' ? 'bg-amber-500 text-slate-950 font-black shadow-md' : 'bg-slate-800 text-slate-400']">
+                        <i class="fa-solid fa-crown"></i>
+                        <span>総合・ジム記録 ({{ generalTrophiesList.length }})</span>
+                    </button>
+                    <button @click="trophyFilterMode = 'studio'" :class="['px-3 py-1.5 rounded-xl transition flex items-center gap-1.5', trophyFilterMode === 'studio' ? 'bg-purple-600 text-white font-black shadow-md' : 'bg-slate-800 text-slate-400']">
+                        <i class="fa-solid fa-masks-theater"></i>
+                        <span>スタジオ称号 ({{ studioTrophiesList.length }})</span>
+                    </button>
+                </div>
+
                 <!-- Trophies Grid -->
                 <div class="space-y-2.5">
-                    <div v-for="t in allTrophiesList" :key="t.id"
+                    <div v-for="t in currentDisplayTrophies" :key="t.id"
                          :class="[
                             'p-3 rounded-2xl border transition flex items-start gap-3.5',
                             isTrophyUnlocked(t.id) 
@@ -820,7 +844,7 @@
                                 <i class="fa-solid fa-sliders text-amber-400"></i>
                                 種目・マシン設定メモ一覧
                             </h2>
-                            <p class="text-xs text-slate-400 mt-0.5">シート高・ピン位置・トレッドミル傾斜・プール設定メモ</p>
+                            <p class="text-xs text-slate-400 mt-0.5">シート高・ピン位置・トレッドミル傾斜・スタジオ設定</p>
                         </div>
                     </div>
 
@@ -878,6 +902,55 @@
                     </div>
                 </div>
 
+                <!-- Individual Studio Programs Participation & Titles Board -->
+                <div class="bg-cardbg rounded-2xl p-4 border border-borderbg space-y-3 shadow-md">
+                    <div class="flex justify-between items-center border-b border-borderbg pb-2">
+                        <h3 class="font-bold text-slate-100 text-sm flex items-center gap-2">
+                            <i class="fa-solid fa-masks-theater text-purple-400"></i>
+                            スタジオプログラム別 参加回数＆獲得称号
+                        </h3>
+                        <span class="text-xs text-purple-300 font-bold bg-purple-950/70 border border-purple-800/60 px-2 py-0.5 rounded-full">
+                            全 {{ studioProgramStatsList.length }} レッスン
+                        </span>
+                    </div>
+
+                    <p class="text-xs text-slate-400">
+                        参加するたびに回数がカウントされ、1回(初参加)・5回・10回で特別称号トロフィーが解放されます。
+                    </p>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                        <div v-for="prog in studioProgramStatsList" :key="prog.name"
+                             class="bg-slate-900 border rounded-xl p-3 space-y-1.5 transition"
+                             :class="prog.count > 0 ? 'border-purple-500/50 shadow-sm bg-gradient-to-br from-slate-900 to-purple-950/20' : 'border-slate-800 opacity-60'">
+                            
+                            <div class="flex justify-between items-start gap-2">
+                                <span class="font-bold text-xs text-slate-100 line-clamp-1">{{ prog.name }}</span>
+                                <span class="text-xs font-mono font-black shrink-0 px-2 py-0.5 rounded-full"
+                                      :class="prog.count > 0 ? 'bg-purple-900/60 text-purple-300 border border-purple-700' : 'bg-slate-800 text-slate-500'">
+                                    {{ prog.count }} 回
+                                </span>
+                            </div>
+
+                            <!-- Current Title / Next Goal Hint -->
+                            <div class="flex justify-between items-center text-[11px] pt-1">
+                                <span class="text-amber-400 font-bold flex items-center gap-1">
+                                    <i class="fa-solid fa-medal text-xs"></i>
+                                    {{ prog.currentTitle }}
+                                </span>
+                                <span v-if="prog.nextGoalHint" class="text-[10px] text-slate-400">
+                                    {{ prog.nextGoalHint }}
+                                </span>
+                            </div>
+
+                            <!-- Progress to 10 classes bar -->
+                            <div class="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden border border-slate-800">
+                                <div class="bg-gradient-to-r from-purple-500 to-amber-400 h-full rounded-full transition-all duration-300"
+                                     :style="{ width: Math.min(100, (prog.count / 10) * 100) + '%' }"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Category Frequency Chart -->
                 <div class="bg-cardbg rounded-2xl p-4 border border-borderbg space-y-3 shadow-md">
                     <h3 class="font-bold text-slate-100 text-sm flex items-center gap-2">
@@ -889,7 +962,7 @@
                     </div>
                 </div>
 
-                <!-- CSV Export & Import Section (Rule 6 - Enhanced with Trophies & Full specs) -->
+                <!-- CSV Export & Import Section -->
                 <div class="bg-cardbg rounded-2xl p-4 border border-borderbg space-y-3 shadow-md mb-6">
                     <h3 class="font-bold text-slate-100 text-sm flex items-center gap-2 border-b border-borderbg pb-2">
                         <i class="fa-solid fa-file-csv text-sky-400"></i>
@@ -897,7 +970,7 @@
                     </h3>
                     
                     <p class="text-xs text-slate-400 leading-relaxed">
-                        スマホとタブレット間の移行やバックアップ用のCSV入出力です。<strong>獲得トロフィーや本来の解放日もそのまま完全に引き継がれます。</strong>
+                        スマホとタブレット間の移行やバックアップ用のCSV入出力です。<strong>スタジオプログラムの参加実績や獲得トロフィーもそのまま完全に引き継がれます。</strong>
                     </p>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
@@ -992,7 +1065,7 @@
     <script>
         const { createApp, ref, computed, watch, onMounted, nextTick } = Vue;
 
-        // JST Safe Local Date Helper (prevents timezone date shifting)
+        // JST Safe Local Date Helper
         const getLocalDateStr = (d = new Date()) => {
             const year = d.getFullYear();
             const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -1017,13 +1090,116 @@
             { id: '自由/有酸素', name: '自由/有酸素', icon: 'fa-solid fa-person-running' },
         ];
 
-        // Studio program names list for verification
-        const STUDIO_PROGRAM_NAMES = [
-            'Fine PILATES', 'ラダー Bee', 'ZUMBA', 'ボクシングビーストBULEファイト',
-            'ボクシングビーストMFCワークアウト', 'ボクシングビーストYELLOWモビリティ',
-            'バランスボール', 'エキサイトエアロ', 'フローリック', 'EJ☆Light',
-            'ターゲットアプス', 'ターゲットアプス（プール）', '夏のハタヨガ', 'ランランエアロ', 'Z-180'
+        // Studio program definitions with personalized titles for 1, 5, and 10 participations
+        const STUDIO_PROGRAM_CONFIG = [
+            {
+                name: 'Fine PILATES',
+                icon: 'fa-solid fa-spa',
+                t1: { title: '呼吸と体幹の発見', desc: 'Fine PILATESに初参加。姿勢の美しさに目覚めた' },
+                t5: { title: '軸ブレ知らずの美姿勢', desc: 'Fine PILATESに5回参加。しなやかなコアを身につけた' },
+                t10: { title: 'ピラティス求道者', desc: 'Fine PILATESに10回参加。究極のセルフコントロール' }
+            },
+            {
+                name: 'ラダー Bee',
+                icon: 'fa-solid fa-bolt',
+                t1: { title: '蜂のように軽やかに', desc: 'ラダー Beeに初参加。俊敏なステップを踏み出した' },
+                t5: { title: '俊敏なるハイブステップ', desc: 'ラダー Beeに5回参加。華麗なフットワークを体得' },
+                t10: { title: '神速のビー・ストライカー', desc: 'ラダー Beeに10回参加。足元の残像が見える境地' }
+            },
+            {
+                name: 'ZUMBA',
+                icon: 'fa-solid fa-music',
+                t1: { title: 'リズムの目覚め', desc: 'ZUMBAに初参加。情熱的なビートに身を委ねた' },
+                t5: { title: '熱風のフィーバーダンサー', desc: 'ZUMBAに5回参加。恥ずかしさを脱ぎ捨てフロアで輝く' },
+                t10: { title: 'フロアの情熱マエストロ', desc: 'ZUMBAに10回参加。スタジオを熱狂で支配する存在' }
+            },
+            {
+                name: 'ボクシングビーストBULEファイト',
+                icon: 'fa-solid fa-hand-back-fist',
+                t1: { title: '覚悟のリングイン', desc: 'ボクシングビーストBULEファイトに初参加。青き闘志のゴング' },
+                t5: { title: '蒼き闘志のコンビネーション', desc: 'BULEファイトに5回参加。鋭いジャブとコンビネーションが冴える' },
+                t10: { title: '百戦錬磨のビーストマスター', desc: 'BULEファイトに10回参加。拳で語る孤高のファイター' }
+            },
+            {
+                name: 'ボクシングビーストMFCワークアウト',
+                icon: 'fa-solid fa-dumbbell',
+                t1: { title: '限界突破のファイトコール', desc: 'ボクシングビーストMFCワークアウトに初参加' },
+                t5: { title: '鋼のスタミナファイター', desc: 'MFCワークアウトに5回参加。猛烈なラッシュに耐え抜く' },
+                t10: { title: '無尽蔵のヘビー級チャンプ', desc: 'MFCワークアウトに10回参加。疲れを知らない鉄人' }
+            },
+            {
+                name: 'ボクシングビーストYELLOWモビリティ',
+                icon: 'fa-solid fa-arrows-spin',
+                t1: { title: '黄色のしなやかステップ', desc: 'YELLOWモビリティに初参加。関節の可動域を解放' },
+                t5: { title: '変幻自在のフットワーク', desc: 'YELLOWモビリティに5回参加。流れるような身のこなし' },
+                t10: { title: 'スパイダー・モビリティ', desc: 'YELLOWモビリティに10回参加。あらゆる衝撃をいなす柔軟性' }
+            },
+            {
+                name: 'バランスボール',
+                icon: 'fa-solid fa-circle-dot',
+                t1: { title: '球体とのファーストコンタクト', desc: 'バランスボールに初参加。揺らぎの中で体幹を意識' },
+                t5: { title: '揺らぎを制する体幹コア', desc: 'バランスボールに5回参加。ボールの上でも微動だにしない' },
+                t10: { title: '不動のバランスマスター', desc: 'バランスボールに10回参加。重心を極めしコアの覇者' }
+            },
+            {
+                name: 'エキサイトエアロ',
+                icon: 'fa-solid fa-person-running',
+                t1: { title: 'ビートに乗ってテイクオフ', desc: 'エキサイトエアロに初参加。高揚感とともにジャンプ' },
+                t5: { title: 'ハイテンションの共鳴', desc: 'エキサイトエアロに5回参加。リズムと汗の心地よいシンクロ' },
+                t10: { title: '熱狂のエアロレジェンド', desc: 'エキサイトエアロに10回参加。スタジオを牽引するフロントランナー' }
+            },
+            {
+                name: 'フローリック',
+                icon: 'fa-solid fa-wind',
+                t1: { title: '気ままなステップの旅', desc: 'フローリックに初参加。遊び心と躍動感を満喫' },
+                t5: { title: '軽快なるダンスランナー', desc: 'フローリックに5回参加。自由自在にフロアを駆け抜ける' },
+                t10: { title: '戯れを極めしスペシャリスト', desc: 'フローリックに10回参加。動きそのものが芸術' }
+            },
+            {
+                name: 'EJ☆Light',
+                icon: 'fa-solid fa-star',
+                t1: { title: 'スターの煌めき・第一歩', desc: 'EJ☆Lightに初参加。心地よい汗と光のシャワー' },
+                t5: { title: '輝くライトステップ', desc: 'EJ☆Lightに5回参加。爽やかな笑顔で動き続ける' },
+                t10: { title: 'スタジオを照らすシャイニングスター', desc: 'EJ☆Lightに10回参加。眩しい存在感を放つ' }
+            },
+            {
+                name: 'ターゲットアプス',
+                icon: 'fa-solid fa-bullseye',
+                t1: { title: '腹筋への目覚ましコール', desc: 'ターゲットアプスに初参加。お腹の奥底が熱くなる' },
+                t5: { title: '刻まれしシックスパックの影', desc: 'ターゲットアプスに5回参加。強固な腹直筋が浮き上がる' },
+                t10: { title: '鋼鉄のウォールアブス', desc: 'ターゲットアプスに10回参加。どんな衝撃も跳ね返す腹筋' }
+            },
+            {
+                name: 'ターゲットアプス（プール）',
+                icon: 'fa-solid fa-water',
+                t1: { title: '水中波紋クランチ', desc: 'ターゲットアプス（プール）に初参加。水圧で腹筋を鍛える' },
+                t5: { title: '水流を裂くアクアコア', desc: 'ターゲットアプス（プール）に5回参加。水中の抵抗を味方に' },
+                t10: { title: '深海のポセイドンアブス', desc: 'ターゲットアプス（プール）に10回参加。水中で完璧に制御された腹筋' }
+            },
+            {
+                name: '夏のハタヨガ',
+                icon: 'fa-solid fa-om',
+                t1: { title: '一呼吸、静寂の境地', desc: '夏のハタヨガに初参加。深い呼吸で心身を整える' },
+                t5: { title: '太陽の巡礼・調和のポーズ', desc: '夏のハタヨガに5回参加。熱気の中で澄み渡る集中力' },
+                t10: { title: '心身合一のヨガサンガ', desc: '夏のハタヨガに10回参加。ブレない芯と深い安らぎ' }
+            },
+            {
+                name: 'ランランエアロ',
+                icon: 'fa-solid fa-person-skating',
+                t1: { title: '弾む心と足取り', desc: 'ランランエアロに初参加。笑顔とともにステップ' },
+                t5: { title: 'スマイル・グルーヴ', desc: 'ランランエアロに5回参加。全身で音楽を楽しむ' },
+                t10: { title: 'エアロの風になった人', desc: 'ランランエアロに10回参加。軽やかに宙を舞うベテラン' }
+            },
+            {
+                name: 'Z-180',
+                icon: 'fa-solid fa-rotate',
+                t1: { title: '限界反転のファーストステップ', desc: 'Z-180に初参加。自分の殻を打ち破る転換点' },
+                t5: { title: '覚醒のハーフターン', desc: 'Z-180に5回参加。劇的な身体の変化を実感' },
+                t10: { title: '極限を凌駕するZフォース', desc: 'Z-180に10回参加。限界を180度反転させた強者' }
+            }
         ];
+
+        const STUDIO_PROGRAM_NAMES = STUDIO_PROGRAM_CONFIG.map(p => p.name);
 
         // Default Master Exercises
         const DEFAULT_MASTER = [
@@ -1043,7 +1219,7 @@
             { id: '14', name: 'ストレッチ・ポール', category: '自由/有酸素', unitType: 'time', settingsNote: '肩甲骨と股関節中心にほぐす', defaultVal1: 15, defaultVal2: 0 }
         ];
 
-        // Inject Studio Programs into master
+        // Add studio programs to master
         STUDIO_PROGRAM_NAMES.forEach((prog, idx) => {
             DEFAULT_MASTER.push({
                 id: `studio_${idx + 1}`,
@@ -1056,29 +1232,70 @@
             });
         });
 
-        // PlayStation Style Trophies Master List
-        const RAW_TROPHY_LIST = [
-            { id: 't_first_step', tier: 'bronze', title: 'はじめの一歩', desc: '初めてトレーニングを記録した', icon: 'fa-solid fa-shoe-prints' },
-            { id: 't_streak_3', tier: 'bronze', title: '3日連続トレーニー', desc: '3日連続でジムを記録した', icon: 'fa-solid fa-fire' },
-            { id: 't_cardio_debut', tier: 'bronze', title: '有酸素デビュー', desc: '有酸素・走行が累計5km突破', icon: 'fa-solid fa-person-running' },
-            { id: 't_first_swim', tier: 'bronze', title: '初泳ぎ', desc: 'プールで通算10往復達成', icon: 'fa-solid fa-person-swimming' },
-            { id: 't_body_snap', tier: 'bronze', title: 'ボディスナップ', desc: '身体サイズまたは写真を記録した', icon: 'fa-solid fa-camera' },
-            { id: 't_studio_debut', tier: 'bronze', title: 'スタジオ初潜入', desc: '勇気を出して初めてスタジオプログラムに参加した', icon: 'fa-solid fa-door-open' },
+        // General Core Trophies
+        const GENERAL_TROPHY_LIST = [
+            { id: 't_first_step', categoryType: 'general', tier: 'bronze', title: 'はじめの一歩', desc: '初めてトレーニングを記録した', icon: 'fa-solid fa-shoe-prints' },
+            { id: 't_streak_3', categoryType: 'general', tier: 'bronze', title: '3日連続トレーニー', desc: '3日連続でジムを記録した', icon: 'fa-solid fa-fire' },
+            { id: 't_cardio_debut', categoryType: 'general', tier: 'bronze', title: '有酸素デビュー', desc: '有酸素・走行が累計5km突破', icon: 'fa-solid fa-person-running' },
+            { id: 't_first_swim', categoryType: 'general', tier: 'bronze', title: '初泳ぎ', desc: 'プールで通算10往復達成', icon: 'fa-solid fa-person-swimming' },
+            { id: 't_body_snap', categoryType: 'general', tier: 'bronze', title: 'ボディスナップ', desc: '身体サイズまたは写真を記録した', icon: 'fa-solid fa-camera' },
+            { id: 't_studio_debut', categoryType: 'general', tier: 'bronze', title: 'スタジオ初潜入', desc: '勇気を出して初めてスタジオプログラムに参加した', icon: 'fa-solid fa-door-open' },
 
-            { id: 't_month_10', tier: 'silver', title: '月間マスター', desc: '月間10回以上ジムで記録した', icon: 'fa-solid fa-calendar-check' },
-            { id: 't_elephant_lift', tier: 'silver', title: 'ゾウを持ち上げた男', desc: '筋トレの総挙上重量が累計5,000kg(5t)を突破', icon: 'fa-solid fa-weight-hanging' },
-            { id: 't_water_fish', tier: 'silver', title: '水中の魚', desc: 'プールで通算100往復達成', icon: 'fa-solid fa-water' },
-            { id: 't_studio_challenger', tier: 'silver', title: 'スタジオチャレンジャー', desc: '3種類以上のスタジオプログラムに挑戦した', icon: 'fa-solid fa-medal' },
-            { id: 't_streak_7', tier: 'silver', title: '習慣化のエキスパート', desc: '7日連続でジムを記録した', icon: 'fa-solid fa-bolt' },
+            { id: 't_month_10', categoryType: 'general', tier: 'silver', title: '月間マスター', desc: '月間10回以上ジムで記録した', icon: 'fa-solid fa-calendar-check' },
+            { id: 't_elephant_lift', categoryType: 'general', tier: 'silver', title: 'ゾウを持ち上げた男', desc: '筋トレの総挙上重量が累計5,000kg(5t)を突破', icon: 'fa-solid fa-weight-hanging' },
+            { id: 't_water_fish', categoryType: 'general', tier: 'silver', title: '水中の魚', desc: 'プールで通算100往復達成', icon: 'fa-solid fa-water' },
+            { id: 't_studio_challenger', categoryType: 'general', tier: 'silver', title: 'スタジオチャレンジャー', desc: '3種類以上のスタジオプログラムに挑戦した', icon: 'fa-solid fa-medal' },
+            { id: 't_streak_7', categoryType: 'general', tier: 'silver', title: '習慣化のエキスパート', desc: '7日連続でジムを記録した', icon: 'fa-solid fa-bolt' },
 
-            { id: 't_days_30', tier: 'gold', title: '鉄人トレーニー', desc: '通算30日以上ジムを記録した', icon: 'fa-solid fa-crown' },
-            { id: 't_marathon', tier: 'gold', title: 'フルマラソン踏破', desc: '有酸素の累計距離が42.195kmを突破', icon: 'fa-solid fa-flag-checkered' },
-            { id: 't_whale_lift', tier: 'gold', title: 'クジラ級リフター', desc: '筋トレ総挙上重量が累計20,000kg(20t)を突破', icon: 'fa-solid fa-dumbbell' },
-            { id: 't_studio_master', tier: 'gold', title: 'スタジオの主 (常連)', desc: 'スタジオプログラムに通算10回以上参加した', icon: 'fa-solid fa-star' },
+            { id: 't_days_30', categoryType: 'general', tier: 'gold', title: '鉄人トレーニー', desc: '通算30日以上ジムを記録した', icon: 'fa-solid fa-crown' },
+            { id: 't_marathon', categoryType: 'general', tier: 'gold', title: 'フルマラソン踏破', desc: '有酸素の累計距離が42.195kmを突破', icon: 'fa-solid fa-flag-checkered' },
+            { id: 't_whale_lift', categoryType: 'general', tier: 'gold', title: 'クジラ級リフター', desc: '筋トレ総挙上重量が累計20,000kg(20t)を突破', icon: 'fa-solid fa-dumbbell' },
+            { id: 't_studio_master', categoryType: 'general', tier: 'gold', title: 'スタジオの主 (常連)', desc: 'スタジオプログラムに通算10回以上参加した', icon: 'fa-solid fa-star' },
 
-            { id: 't_studio_king', tier: 'platinum', title: 'スタジオコンプリート王', desc: '7種類以上のスタジオプログラムを制覇した', icon: 'fa-solid fa-shield-cat' },
-            { id: 't_platinum_legend', tier: 'platinum', title: 'FitLog Legend', desc: '10個以上のアチーブメントを獲得した', icon: 'fa-solid fa-gem' }
+            { id: 't_studio_king', categoryType: 'general', tier: 'platinum', title: 'スタジオコンプリート王', desc: '7種類以上のスタジオプログラムを制覇した', icon: 'fa-solid fa-shield-cat' },
+            { id: 't_platinum_legend', categoryType: 'general', tier: 'platinum', title: 'FitLog Legend', desc: '10個以上のアチーブメントを獲得した', icon: 'fa-solid fa-gem' }
         ];
+
+        // Generate Studio-Specific Trophies (1st, 5th, 10th milestone for each program)
+        const STUDIO_SPECIFIC_TROPHIES = [];
+        STUDIO_PROGRAM_CONFIG.forEach((p, idx) => {
+            const safeKey = `st_${idx + 1}`;
+            // Tier 1 (Bronze - 1st time)
+            STUDIO_SPECIFIC_TROPHIES.push({
+                id: `${safeKey}_1`,
+                programName: p.name,
+                categoryType: 'studio',
+                milestone: 1,
+                tier: 'bronze',
+                title: `【${p.name}】${p.t1.title}`,
+                desc: p.t1.desc,
+                icon: p.icon
+            });
+            // Tier 2 (Silver - 5th time)
+            STUDIO_SPECIFIC_TROPHIES.push({
+                id: `${safeKey}_5`,
+                programName: p.name,
+                categoryType: 'studio',
+                milestone: 5,
+                tier: 'silver',
+                title: `【${p.name}】${p.t5.title}`,
+                desc: p.t5.desc,
+                icon: p.icon
+            });
+            // Tier 3 (Gold - 10th time)
+            STUDIO_SPECIFIC_TROPHIES.push({
+                id: `${safeKey}_10`,
+                programName: p.name,
+                categoryType: 'studio',
+                milestone: 10,
+                tier: 'gold',
+                title: `【${p.name}】${p.t10.title}`,
+                desc: p.t10.desc,
+                icon: 'fa-solid fa-trophy'
+            });
+        });
+
+        const ALL_COMBINED_TROPHIES = [...GENERAL_TROPHY_LIST, ...STUDIO_SPECIFIC_TROPHIES];
 
         createApp({
             setup() {
@@ -1090,6 +1307,7 @@
                 const customExerciseUnitType = ref('weight_reps');
                 const isEditingMachineNote = ref(false);
                 const machineCategoryFilter = ref('ALL');
+                const trophyFilterMode = ref('general'); // 'general' or 'studio'
 
                 const showCopyModal = ref(false);
                 const targetCopyDate = ref(getLocalDateStr());
@@ -1101,7 +1319,7 @@
                 const exerciseMaster = ref([]);
                 const logs = ref({});
                 const trophies = ref({}); // { trophyId: unlockDateStr }
-                const bodyRecords = ref({}); // { 'YYYY-MM-DD': { weight, bodyFat, waist, chest, arm, thigh, photo } }
+                const bodyRecords = ref({});
 
                 const activeWorkingExercise = ref(null);
                 const hasPreviousRecord = ref(false);
@@ -1110,13 +1328,11 @@
                 const activeTrophyNotice = ref(null);
                 const toastMessage = ref('');
 
-                // Helper to show simple message without alert()
                 const showNotification = (msg) => {
                     toastMessage.value = msg;
                     setTimeout(() => { toastMessage.value = ''; }, 3000);
                 };
 
-                // Sound effect for PlayStation-like trophy unlock
                 const playTrophySound = () => {
                     try {
                         const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -1124,7 +1340,6 @@
                         const ctx = new AudioContext();
                         const now = ctx.currentTime;
                         
-                        // Jingle notes (C5 -> E5 -> G5 -> C6)
                         const notes = [523.25, 659.25, 783.99, 1046.50];
                         notes.forEach((freq, idx) => {
                             const osc = ctx.createOscillator();
@@ -1166,7 +1381,6 @@
                 };
 
                 onMounted(() => {
-                    // 1. Master load & sync studio items
                     const savedMaster = localStorage.getItem('fitlog_master_v3');
                     if (savedMaster) {
                         try {
@@ -1193,7 +1407,6 @@
                     }
                     saveMasterData();
 
-                    // 2. Logs load
                     const savedLogs = localStorage.getItem('fitlog_logs_v3');
                     if (savedLogs) {
                         try { logs.value = JSON.parse(savedLogs); } catch(e) { logs.value = {}; }
@@ -1204,13 +1417,11 @@
                         }
                     }
 
-                    // 3. Trophies load
                     const savedTrophies = localStorage.getItem('fitlog_trophies_v2');
                     if (savedTrophies) {
                         try { trophies.value = JSON.parse(savedTrophies); } catch(e) { trophies.value = {}; }
                     }
 
-                    // 4. Body records load
                     const savedBody = localStorage.getItem('fitlog_body_records_v1');
                     if (savedBody) {
                         try { bodyRecords.value = JSON.parse(savedBody); } catch(e) { bodyRecords.value = {}; }
@@ -1255,7 +1466,6 @@
                     return logs.value[selectedDate.value];
                 });
 
-                // Calculate stay duration (e.g., "1時間30分間" or "45分間")
                 const stayDurationText = computed(() => {
                     const start = currentDailyLog.value?.startTime;
                     const end = currentDailyLog.value?.endTime;
@@ -1264,7 +1474,7 @@
                     const [sH, sM] = start.split(':').map(Number);
                     const [eH, eM] = end.split(':').map(Number);
                     let diffMin = (eH * 60 + eM) - (sH * 60 + sM);
-                    if (diffMin < 0) diffMin += 24 * 60; // Handle midnight crossing
+                    if (diffMin < 0) diffMin += 24 * 60;
 
                     const h = Math.floor(diffMin / 60);
                     const m = diffMin % 60;
@@ -1272,7 +1482,6 @@
                     return `${h}時間${m > 0 ? ` ${m}分間` : ''}`;
                 });
 
-                // Helper to quickly record current time for check-in / check-out
                 const setTimeToNow = (field) => {
                     const now = new Date();
                     const hours = String(now.getHours()).padStart(2, '0');
@@ -1339,28 +1548,73 @@
                     return sum;
                 });
 
-                // Helper to parse date string into timestamp
+                // Studio program participation stats array
+                const studioProgramStatsList = computed(() => {
+                    const counts = {};
+                    STUDIO_PROGRAM_NAMES.forEach(name => { counts[name] = 0; });
+
+                    Object.values(logs.value).forEach(dayLog => {
+                        if (dayLog.exercises) {
+                            dayLog.exercises.forEach(ex => {
+                                if (counts[ex.name] !== undefined) {
+                                    // Count as 1 participation per exercise session recorded
+                                    counts[ex.name] += (ex.sets && ex.sets.length > 0 ? 1 : 1);
+                                }
+                            });
+                        }
+                    });
+
+                    return STUDIO_PROGRAM_CONFIG.map(p => {
+                        const c = counts[p.name] || 0;
+                        let currentTitle = '未参加';
+                        let nextGoalHint = '次回で初称号！';
+
+                        if (c >= 10) {
+                            currentTitle = p.t10.title;
+                            nextGoalHint = '★ 称号コンプリート！';
+                        } else if (c >= 5) {
+                            currentTitle = p.t5.title;
+                            nextGoalHint = `あと ${10 - c}回で【${p.t10.title}】`;
+                        } else if (c >= 1) {
+                            currentTitle = p.t1.title;
+                            nextGoalHint = `あと ${5 - c}回で【${p.t5.title}】`;
+                        }
+
+                        return {
+                            name: p.name,
+                            count: c,
+                            currentTitle: currentTitle,
+                            nextGoalHint: nextGoalHint,
+                            icon: p.icon
+                        };
+                    });
+                });
+
+                // Status info for currently selected exercise if it is a studio program
+                const selectedStudioProgramInfo = computed(() => {
+                    if (!currentExerciseName.value) return null;
+                    return studioProgramStatsList.value.find(p => p.name === currentExerciseName.value) || null;
+                });
+
                 const parseDateToMs = (str) => {
                     if (!str) return 0;
                     const parts = str.split('-');
                     return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2])).getTime();
                 };
 
-                // Trophy Verification Logic: Calculates ACTUAL historical achievement dates
                 const checkTrophies = (triggerAnimation = true) => {
                     const sortedDates = Object.keys(logs.value)
                         .filter(k => logs.value[k].exercises && logs.value[k].exercises.length > 0)
                         .sort((a, b) => parseDateToMs(a) - parseDateToMs(b));
 
                     const datesCount = sortedDates.length;
-                    const calculatedUnlocks = {}; // { trophyId: actualUnlockDateStr }
+                    const calculatedUnlocks = {};
 
-                    // 1. First Step (Date of very first recorded workout)
                     if (datesCount >= 1) {
                         calculatedUnlocks['t_first_step'] = sortedDates[0];
                     }
 
-                    // 2. Streaks (3 days and 7 days)
+                    // Streaks
                     let currentStreak = 0;
                     let streak3Date = null;
                     let streak7Date = null;
@@ -1384,40 +1638,57 @@
                     if (streak3Date) calculatedUnlocks['t_streak_3'] = streak3Date;
                     if (streak7Date) calculatedUnlocks['t_streak_7'] = streak7Date;
 
-                    // 3. Historical walk-through to find exact date of cumulative goals
+                    // Cumulative history loop
                     let runDist = 0;
                     let runLift = 0;
                     let runSwim = 0;
                     let studioTotal = 0;
                     const studioTypes = new Set();
+                    const individualStudioCounts = {};
+                    STUDIO_PROGRAM_NAMES.forEach(n => { individualStudioCounts[n] = 0; });
 
                     sortedDates.forEach(dStr => {
                         const dayLog = logs.value[dStr];
                         if (!dayLog || !dayLog.exercises) return;
 
                         dayLog.exercises.forEach(ex => {
-                            // Weight Lifted
                             if (ex.unitType === 'weight_reps' && ex.sets) {
                                 ex.sets.forEach(s => {
                                     runLift += (s.val1 || 0) * (s.val2 || 0);
                                 });
                             }
-                            // Cardio Distance (Only distance_time)
                             if (ex.unitType === 'distance_time' && ex.sets) {
                                 ex.sets.forEach(s => {
                                     runDist += (s.val1 || 0);
                                 });
                             }
-                            // Swimming Laps
                             if (ex.unitType === 'swim' && ex.sets) {
                                 ex.sets.forEach(s => {
                                     runSwim += (s.val1 || 0);
                                 });
                             }
-                            // Studio Program checks
+
+                            // Studio tracking
                             if (STUDIO_PROGRAM_NAMES.includes(ex.name)) {
-                                studioTotal += (ex.sets ? ex.sets.length : 1);
+                                studioTotal += 1;
                                 studioTypes.add(ex.name);
+                                individualStudioCounts[ex.name] += 1;
+
+                                const progCount = individualStudioCounts[ex.name];
+                                const progIdx = STUDIO_PROGRAM_CONFIG.findIndex(p => p.name === ex.name);
+                                if (progIdx >= 0) {
+                                    const safeKey = `st_${progIdx + 1}`;
+                                    if (progCount >= 1 && !calculatedUnlocks[`${safeKey}_1`]) {
+                                        calculatedUnlocks[`${safeKey}_1`] = dStr;
+                                    }
+                                    if (progCount >= 5 && !calculatedUnlocks[`${safeKey}_5`]) {
+                                        calculatedUnlocks[`${safeKey}_5`] = dStr;
+                                    }
+                                    if (progCount >= 10 && !calculatedUnlocks[`${safeKey}_10`]) {
+                                        calculatedUnlocks[`${safeKey}_10`] = dStr;
+                                    }
+                                }
+
                                 if (!calculatedUnlocks['t_studio_debut']) {
                                     calculatedUnlocks['t_studio_debut'] = dStr;
                                 }
@@ -1433,7 +1704,6 @@
                             }
                         });
 
-                        // Check cumulative thresholds on this day
                         if (runDist >= 5.0 && !calculatedUnlocks['t_cardio_debut']) {
                             calculatedUnlocks['t_cardio_debut'] = dStr;
                         }
@@ -1454,45 +1724,34 @@
                         }
                     });
 
-                    // 4. Workout count days
-                    if (datesCount >= 10) {
-                        calculatedUnlocks['t_month_10'] = sortedDates[9];
-                    }
-                    if (datesCount >= 30) {
-                        calculatedUnlocks['t_days_30'] = sortedDates[29];
-                    }
+                    if (datesCount >= 10) calculatedUnlocks['t_month_10'] = sortedDates[9];
+                    if (datesCount >= 30) calculatedUnlocks['t_days_30'] = sortedDates[29];
 
-                    // 5. Body Measurement Snap
                     const bodyDates = Object.keys(bodyRecords.value).sort();
-                    if (bodyDates.length > 0) {
-                        calculatedUnlocks['t_body_snap'] = bodyDates[0];
-                    }
+                    if (bodyDates.length > 0) calculatedUnlocks['t_body_snap'] = bodyDates[0];
 
-                    // 6. Check Platinum Legend
                     const normalUnlockedKeys = Object.keys(calculatedUnlocks).filter(k => k !== 't_platinum_legend');
-                    if (normalUnlockedKeys.length >= 10) {
-                        calculatedUnlocks['t_platinum_legend'] = getLocalDateStr();
+                    if (normalUnlockedKeys.length >= 10 && !calculatedUnlocks['t_platinum_legend']) {
+                        calculatedUnlocks['t_platinum_legend'] = sortedDates[sortedDates.length - 1] || getLocalDateStr();
                     }
 
-                    // Apply newly unlocked trophies and fix any inaccurate "today" dates
+                    // Compare and trigger unlocks
                     let newlyUnlockedTrophyObj = null;
 
                     Object.keys(calculatedUnlocks).forEach(tId => {
                         const correctDate = calculatedUnlocks[tId];
                         const hadTrophy = !!trophies.value[tId];
 
-                        // If not had, or had with wrong fallback date, set to actual historical date
                         if (!hadTrophy) {
                             trophies.value[tId] = correctDate;
                             if (triggerAnimation && !newlyUnlockedTrophyObj) {
-                                newlyUnlockedTrophyObj = RAW_TROPHY_LIST.find(t => t.id === tId);
+                                newlyUnlockedTrophyObj = ALL_COMBINED_TROPHIES.find(t => t.id === tId);
                             }
                         } else if (trophies.value[tId] !== correctDate && !trophies.value[tId]?.startsWith('20')) {
                             trophies.value[tId] = correctDate;
                         }
                     });
 
-                    // If conditions are no longer met (e.g. false cardio calculation fixed), remove it
                     Object.keys(trophies.value).forEach(tId => {
                         if (!calculatedUnlocks[tId]) {
                             delete trophies.value[tId];
@@ -1501,12 +1760,11 @@
 
                     localStorage.setItem('fitlog_trophies_v2', JSON.stringify(trophies.value));
 
-                    // Trigger PS Trophy Popup animation if a new trophy was achieved right now
                     if (newlyUnlockedTrophyObj && triggerAnimation) {
                         activeTrophyNotice.value = newlyUnlockedTrophyObj;
                         playTrophySound();
                         if (window.confetti) {
-                            confetti({ particleCount: 50, spread: 70, origin: { y: 0.2 } });
+                            confetti({ particleCount: 55, spread: 75, origin: { y: 0.2 } });
                         }
                         setTimeout(() => {
                             if (activeTrophyNotice.value?.id === newlyUnlockedTrophyObj.id) {
@@ -1519,42 +1777,55 @@
                 const isTrophyUnlocked = (id) => !!trophies.value[id];
                 const getTrophyUnlockDate = (id) => trophies.value[id] || '';
 
-                const unlockedTrophiesCount = computed(() => Object.keys(trophies.value).length);
-                const allTrophiesList = computed(() => RAW_TROPHY_LIST);
-                const trophyProgressRate = computed(() => {
-                    return Math.round((unlockedTrophiesCount.value / RAW_TROPHY_LIST.length) * 100) || 0;
+                const allTrophiesList = computed(() => ALL_COMBINED_TROPHIES);
+                const generalTrophiesList = computed(() => GENERAL_TROPHY_LIST);
+                const studioTrophiesList = computed(() => STUDIO_SPECIFIC_TROPHIES);
+
+                const currentDisplayTrophies = computed(() => {
+                    return trophyFilterMode.value === 'general' ? generalTrophiesList.value : studioTrophiesList.value;
                 });
 
-                // Tier-based trophy counts for PS style overview
+                const unlockedTrophiesCount = computed(() => Object.keys(trophies.value).length);
+                const trophyProgressRate = computed(() => {
+                    return Math.round((unlockedTrophiesCount.value / ALL_COMBINED_TROPHIES.length) * 100) || 0;
+                });
+
+                // Tier-based trophy counts
                 const bronzeCount = computed(() => {
                     return Object.keys(trophies.value).filter(id => {
-                        const t = RAW_TROPHY_LIST.find(item => item.id === id);
+                        const t = ALL_COMBINED_TROPHIES.find(item => item.id === id);
                         return t && t.tier === 'bronze';
                     }).length;
                 });
 
                 const silverCount = computed(() => {
                     return Object.keys(trophies.value).filter(id => {
-                        const t = RAW_TROPHY_LIST.find(item => item.id === id);
+                        const t = ALL_COMBINED_TROPHIES.find(item => item.id === id);
                         return t && t.tier === 'silver';
                     }).length;
                 });
 
                 const goldCount = computed(() => {
                     return Object.keys(trophies.value).filter(id => {
-                        const t = RAW_TROPHY_LIST.find(item => item.id === id);
+                        const t = ALL_COMBINED_TROPHIES.find(item => item.id === id);
                         return t && t.tier === 'gold';
                     }).length;
                 });
 
                 const platinumCount = computed(() => {
                     return Object.keys(trophies.value).filter(id => {
-                        const t = RAW_TROPHY_LIST.find(item => item.id === id);
+                        const t = ALL_COMBINED_TROPHIES.find(item => item.id === id);
                         return t && t.tier === 'platinum';
                     }).length;
                 });
 
                 const getTrophyProgressHint = (t) => {
+                    if (t.categoryType === 'studio') {
+                        const stat = studioProgramStatsList.value.find(p => p.name === t.programName);
+                        const cur = stat ? stat.count : 0;
+                        return `参加回数: ${cur} / ${t.milestone}回`;
+                    }
+
                     switch(t.id) {
                         case 't_cardio_debut': return `現在: ${totalCardioDistance.value.toFixed(1)} / 5.0km`;
                         case 't_marathon': return `現在: ${totalCardioDistance.value.toFixed(1)} / 42.2km`;
@@ -1566,7 +1837,6 @@
                     }
                 };
 
-                // Body Measurement & Photo Features
                 const currentBodyRecord = computed({
                     get: () => {
                         if (!bodyRecords.value[selectedDate.value]) {
@@ -1589,7 +1859,6 @@
                     reader.onload = (event) => {
                         const img = new Image();
                         img.onload = () => {
-                            // Resize to max 600px width/height to safely save in localStorage
                             const canvas = document.createElement('canvas');
                             const maxDim = 600;
                             let width = img.width;
@@ -1639,7 +1908,6 @@
                     return bodyHistoryListWithPhotos.value[bodyHistoryListWithPhotos.value.length - 1] || {};
                 });
 
-                // Sets display formatter
                 const formatSetDisplay = (unitType, s) => {
                     const v1 = s.val1 || 0;
                     const v2 = s.val2 || 0;
@@ -1682,7 +1950,6 @@
                     }
                 };
 
-                // Exercise Selection Trigger -> Auto-fill Previous Data
                 const onExerciseSelect = () => {
                     if (!currentExerciseName.value) return;
 
@@ -1746,7 +2013,6 @@
                     }
                 };
 
-                // Fast adjustment buttons
                 const adjustPrimaryValue = (delta) => {
                     if (!activeWorkingExercise.value?.sets) return;
                     activeWorkingExercise.value.sets.forEach(s => {
@@ -1948,7 +2214,6 @@
                     saveMasterData();
                 };
 
-                // CSV Export (Rule 6 - With Trophy Metadata preserving unlock dates)
                 const exportCSV = () => {
                     let csvContent = "\uFEFF日付,部位,種目名,形式,セット番号,値1(kg/km/往復/分),値2(回/分),種目メモ,全体メモ,到着時刻,退館時刻\n";
 
@@ -1976,7 +2241,6 @@
                         }
                     });
 
-                    // Embed Trophy Unlock Info metadata
                     const trophyJson = encodeURIComponent(JSON.stringify(trophies.value));
                     csvContent += `\n#META_TROPHIES,${trophyJson}\n`;
 
@@ -1991,7 +2255,6 @@
                     showNotification('CSVファイルを書き出しました');
                 };
 
-                // CSV Import (Rule 6 - Strict unitType recovery and trophy restoration)
                 const importCSV = (event) => {
                     const file = event.target.files[0];
                     if (!file) return;
@@ -2009,7 +2272,6 @@
                             const line = lines[i].trim();
                             if (!line) continue;
 
-                            // Restore trophies metadata if present
                             if (line.startsWith('#META_TROPHIES,')) {
                                 try {
                                     const encoded = line.replace('#META_TROPHIES,', '').trim();
@@ -2033,7 +2295,6 @@
                                 }
 
                                 if (date && name) {
-                                    // Verify unitType against exercise master so minutes never turn into km
                                     const masterItem = exerciseMaster.value.find(m => m.name === name);
                                     let resolvedUnitType = unitType;
 
@@ -2078,7 +2339,6 @@
                             }
                         }
 
-                        // Restore original trophies without overwriting with today's date
                         if (importedTrophies && typeof importedTrophies === 'object') {
                             trophies.value = importedTrophies;
                             localStorage.setItem('fitlog_trophies_v2', JSON.stringify(trophies.value));
@@ -2158,6 +2418,7 @@
                     customExerciseUnitType,
                     isEditingMachineNote,
                     machineCategoryFilter,
+                    trophyFilterMode,
                     categories,
                     exerciseMaster,
                     currentDailyLog,
@@ -2171,6 +2432,8 @@
                     totalWorkoutDays,
                     totalLiftedWeight,
                     totalCardioDistance,
+                    studioProgramStatsList,
+                    selectedStudioProgramInfo,
                     showCopyModal,
                     targetCopyDate,
                     calendarYear,
@@ -2180,6 +2443,9 @@
                     toastMessage,
                     unlockedTrophiesCount,
                     allTrophiesList,
+                    generalTrophiesList,
+                    studioTrophiesList,
+                    currentDisplayTrophies,
                     trophyProgressRate,
                     bronzeCount,
                     silverCount,
