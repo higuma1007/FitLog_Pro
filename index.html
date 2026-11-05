@@ -258,6 +258,7 @@
                             <select v-model="customExerciseUnitType" class="bg-slate-900 border border-slate-700 text-slate-300 rounded-xl px-2 py-2 text-xs focus:outline-none focus:border-emerald-500">
                                 <option value="weight_reps">重量(kg) × 回数</option>
                                 <option value="distance_time">距離(km) × 時間(分)</option>
+                                <option value="distance_only">距離(km)のみ</option>
                                 <option value="swim">往復/本数 × 時間(分)</option>
                                 <option value="time">時間(分)のみ</option>
                             </select>
@@ -310,10 +311,11 @@
                         <div class="flex items-center gap-2 text-xs">
                             <span class="text-[11px] text-slate-400">記録形式:</span>
                             <div class="flex gap-1 overflow-x-auto text-[11px]">
-                                <button type="button" @click="changeActiveUnitType('weight_reps')" :class="['px-2 py-1 rounded-lg border transition', activeWorkingExercise.unitType === 'weight_reps' ? 'bg-emerald-900/60 text-emerald-300 border-emerald-500' : 'bg-slate-950 text-slate-400 border-slate-800']">重量×回数</button>
-                                <button type="button" @click="changeActiveUnitType('distance_time')" :class="['px-2 py-1 rounded-lg border transition', activeWorkingExercise.unitType === 'distance_time' ? 'bg-emerald-900/60 text-emerald-300 border-emerald-500' : 'bg-slate-950 text-slate-400 border-slate-800']">距離×時間</button>
-                                <button type="button" @click="changeActiveUnitType('swim')" :class="['px-2 py-1 rounded-lg border transition', activeWorkingExercise.unitType === 'swim' ? 'bg-emerald-900/60 text-emerald-300 border-emerald-500' : 'bg-slate-950 text-slate-400 border-slate-800']">プール(本/往復×時間)</button>
-                                <button type="button" @click="changeActiveUnitType('time')" :class="['px-2 py-1 rounded-lg border transition', activeWorkingExercise.unitType === 'time' ? 'bg-emerald-900/60 text-emerald-300 border-emerald-500' : 'bg-slate-950 text-slate-400 border-slate-800']">時間のみ</button>
+                                <button type="button" @click="changeActiveUnitType('weight_reps')" :class="['px-2 py-1 rounded-lg border transition whitespace-nowrap', activeWorkingExercise.unitType === 'weight_reps' ? 'bg-emerald-900/60 text-emerald-300 border-emerald-500' : 'bg-slate-950 text-slate-400 border-slate-800']">重量×回数</button>
+                                <button type="button" @click="changeActiveUnitType('distance_time')" :class="['px-2 py-1 rounded-lg border transition whitespace-nowrap', activeWorkingExercise.unitType === 'distance_time' ? 'bg-emerald-900/60 text-emerald-300 border-emerald-500' : 'bg-slate-950 text-slate-400 border-slate-800']">距離×時間</button>
+                                <button type="button" @click="changeActiveUnitType('distance_only')" :class="['px-2 py-1 rounded-lg border transition whitespace-nowrap', activeWorkingExercise.unitType === 'distance_only' ? 'bg-emerald-900/60 text-emerald-300 border-emerald-500' : 'bg-slate-950 text-slate-400 border-slate-800']">距離のみ</button>
+                                <button type="button" @click="changeActiveUnitType('swim')" :class="['px-2 py-1 rounded-lg border transition whitespace-nowrap', activeWorkingExercise.unitType === 'swim' ? 'bg-emerald-900/60 text-emerald-300 border-emerald-500' : 'bg-slate-950 text-slate-400 border-slate-800']">プール(本/往復×時間)</button>
+                                <button type="button" @click="changeActiveUnitType('time')" :class="['px-2 py-1 rounded-lg border transition whitespace-nowrap', activeWorkingExercise.unitType === 'time' ? 'bg-emerald-900/60 text-emerald-300 border-emerald-500' : 'bg-slate-950 text-slate-400 border-slate-800']">時間のみ</button>
                             </div>
                         </div>
 
@@ -340,6 +342,15 @@
                                 <button @click="adjustPrimaryValue(1.0)" class="bg-emerald-950 hover:bg-emerald-900 text-emerald-300 py-1.5 rounded-lg text-xs font-bold active:scale-95 transition border border-emerald-800/60">+1.0km</button>
                                 <button @click="adjustSecondaryValue(5)" class="bg-sky-950 hover:bg-sky-900 text-sky-300 py-1.5 rounded-lg text-xs font-bold active:scale-95 transition border border-sky-800/60">+5分</button>
                                 <button @click="adjustSecondaryValue(10)" class="bg-sky-950 hover:bg-sky-900 text-sky-300 py-1.5 rounded-lg text-xs font-bold active:scale-95 transition border border-sky-800/60">+10分</button>
+                            </div>
+
+                            <!-- Distance Only (New) -->
+                            <div v-else-if="activeWorkingExercise.unitType === 'distance_only'" class="grid grid-cols-5 gap-1.5">
+                                <button @click="adjustPrimaryValue(-1.0)" class="bg-slate-800 hover:bg-slate-700 text-slate-300 py-1.5 rounded-lg text-xs font-bold active:scale-95 transition border border-slate-700">-1.0km</button>
+                                <button @click="adjustPrimaryValue(-0.5)" class="bg-slate-800 hover:bg-slate-700 text-slate-300 py-1.5 rounded-lg text-xs font-bold active:scale-95 transition border border-slate-700">-0.5km</button>
+                                <button @click="adjustPrimaryValue(0.5)" class="bg-emerald-950 hover:bg-emerald-900 text-emerald-300 py-1.5 rounded-lg text-xs font-bold active:scale-95 transition border border-emerald-800/60">+0.5km</button>
+                                <button @click="adjustPrimaryValue(1.0)" class="bg-emerald-950 hover:bg-emerald-900 text-emerald-300 py-1.5 rounded-lg text-xs font-bold active:scale-95 transition border border-emerald-800/60">+1.0km</button>
+                                <button @click="adjustPrimaryValue(2.0)" class="bg-emerald-950 hover:bg-emerald-900 text-emerald-300 py-1.5 rounded-lg text-xs font-bold active:scale-95 transition border border-emerald-800/60">+2.0km</button>
                             </div>
 
                             <!-- Swim -->
@@ -373,6 +384,9 @@
                                     <span class="col-span-4">距離 (km)</span>
                                     <span class="col-span-4">時間 (分)</span>
                                 </template>
+                                <template v-else-if="activeWorkingExercise.unitType === 'distance_only'">
+                                    <span class="col-span-8">距離 (km)</span>
+                                </template>
                                 <template v-else-if="activeWorkingExercise.unitType === 'swim'">
                                     <span class="col-span-4">本数/往復</span>
                                     <span class="col-span-4">時間 (分)</span>
@@ -404,6 +418,12 @@
                                     </div>
                                     <div class="col-span-4 relative">
                                         <input type="number" step="1" v-model.number="set.val2" placeholder="分" class="w-full bg-slate-950 border border-slate-700 text-center font-bold text-slate-100 rounded-lg py-2 text-sm focus:outline-none focus:border-emerald-500">
+                                    </div>
+                                </template>
+
+                                <template v-else-if="activeWorkingExercise.unitType === 'distance_only'">
+                                    <div class="col-span-8 relative">
+                                        <input type="number" step="0.1" v-model.number="set.val1" placeholder="km" class="w-full bg-slate-950 border border-slate-700 text-center font-bold text-slate-100 rounded-lg py-2 text-sm focus:outline-none focus:border-emerald-500">
                                     </div>
                                 </template>
 
@@ -902,6 +922,58 @@
                     </div>
                 </div>
 
+                <!-- Machine & Exercise Workout Days Summary Board (New) -->
+                <div class="bg-cardbg rounded-2xl p-4 border border-borderbg space-y-3 shadow-md">
+                    <div class="flex justify-between items-center border-b border-borderbg pb-2">
+                        <div>
+                            <h3 class="font-bold text-slate-100 text-sm flex items-center gap-2">
+                                <i class="fa-solid fa-list-check text-emerald-400"></i>
+                                マシン・種目別 実施日数一覧
+                            </h3>
+                            <p class="text-[11px] text-slate-400 mt-0.5">どのマシンを何日やったかが一目でわかります</p>
+                        </div>
+                        <span class="text-xs text-emerald-400 font-bold bg-emerald-950/70 border border-emerald-800/60 px-2.5 py-0.5 rounded-full font-mono">
+                            {{ activeExerciseStatsList.length }} 種目実施済
+                        </span>
+                    </div>
+
+                    <!-- Category Filter Pills for Machine Stats -->
+                    <div class="flex gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar">
+                        <button @click="statsCategoryFilter = 'ALL'" :class="['px-2.5 py-1 rounded-xl transition whitespace-nowrap text-xs font-semibold', statsCategoryFilter === 'ALL' ? 'bg-emerald-600 text-white shadow-md' : 'bg-slate-800 text-slate-400 hover:bg-slate-700']">すべて</button>
+                        <button v-for="cat in categories" :key="cat.id" @click="statsCategoryFilter = cat.name" :class="['px-2.5 py-1 rounded-xl transition whitespace-nowrap text-xs font-semibold', statsCategoryFilter === cat.name ? 'bg-emerald-600 text-white shadow-md' : 'bg-slate-800 text-slate-400 hover:bg-slate-700']">
+                            {{ cat.name }}
+                        </button>
+                    </div>
+
+                    <div v-if="filteredExerciseStatsList.length === 0" class="text-center py-6 text-slate-500 text-xs">
+                        該当する種目の実施記録はまだありません。
+                    </div>
+
+                    <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                        <div v-for="item in filteredExerciseStatsList" :key="item.name"
+                             class="bg-slate-900 border border-slate-800 rounded-xl p-3 flex justify-between items-center transition hover:border-slate-700">
+                            <div class="space-y-0.5 min-w-0 pr-2">
+                                <div class="flex items-center gap-1.5 flex-wrap">
+                                    <span class="text-[10px] bg-slate-800 text-emerald-400 px-1.5 py-0.2 rounded font-bold border border-slate-700 font-mono">
+                                        {{ item.category }}
+                                    </span>
+                                    <span class="font-bold text-xs text-slate-200 truncate">{{ item.name }}</span>
+                                </div>
+                                <div class="text-[10px] text-slate-400 flex items-center gap-2">
+                                    <span>累計 {{ item.totalSets }} セット</span>
+                                    <span class="text-slate-600">•</span>
+                                    <span>最終: {{ item.lastDate }}</span>
+                                </div>
+                            </div>
+                            <div class="text-right shrink-0">
+                                <div class="font-black text-emerald-400 font-mono text-base">
+                                    {{ item.daysCount }} <span class="text-[11px] font-normal text-slate-400">日</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Individual Studio Programs Participation & Titles Board -->
                 <div class="bg-cardbg rounded-2xl p-4 border border-borderbg space-y-3 shadow-md">
                     <div class="flex justify-between items-center border-b border-borderbg pb-2">
@@ -1307,6 +1379,7 @@
                 const customExerciseUnitType = ref('weight_reps');
                 const isEditingMachineNote = ref(false);
                 const machineCategoryFilter = ref('ALL');
+                const statsCategoryFilter = ref('ALL');
                 const trophyFilterMode = ref('general'); // 'general' or 'studio'
 
                 const showCopyModal = ref(false);
@@ -1363,6 +1436,7 @@
                 const getUnitTypeLabel = (type) => {
                     switch (type) {
                         case 'distance_time': return '距離(km) × 時間(分)';
+                        case 'distance_only': return '距離(km)のみ';
                         case 'swim': return '往復/本数 × 時間(分)';
                         case 'time': return '時間(分)';
                         case 'weight_reps':
@@ -1537,7 +1611,7 @@
                     Object.values(logs.value).forEach(log => {
                         if (log.exercises) {
                             log.exercises.forEach(ex => {
-                                if (ex.unitType === 'distance_time' && ex.sets) {
+                                if ((ex.unitType === 'distance_time' || ex.unitType === 'distance_only') && ex.sets) {
                                     ex.sets.forEach(s => {
                                         sum += (s.val1 || 0);
                                     });
@@ -1546,6 +1620,48 @@
                         }
                     });
                     return sum;
+                });
+
+                // Machine & Exercise Workout Days Aggregation
+                const exerciseStatsList = computed(() => {
+                    const statsMap = {};
+
+                    Object.keys(logs.value).sort().forEach(dateStr => {
+                        const dayLog = logs.value[dateStr];
+                        if (!dayLog || !dayLog.exercises) return;
+
+                        dayLog.exercises.forEach(ex => {
+                            if (!statsMap[ex.name]) {
+                                statsMap[ex.name] = {
+                                    name: ex.name,
+                                    category: ex.category || 'その他',
+                                    datesSet: new Set(),
+                                    totalSets: 0,
+                                    lastDate: dateStr
+                                };
+                            }
+                            statsMap[ex.name].datesSet.add(dateStr);
+                            statsMap[ex.name].totalSets += (ex.sets ? ex.sets.length : 1);
+                            statsMap[ex.name].lastDate = dateStr;
+                        });
+                    });
+
+                    return Object.values(statsMap)
+                        .map(item => ({
+                            name: item.name,
+                            category: item.category,
+                            daysCount: item.datesSet.size,
+                            totalSets: item.totalSets,
+                            lastDate: item.lastDate
+                        }))
+                        .sort((a, b) => b.daysCount - a.daysCount || b.totalSets - a.totalSets);
+                });
+
+                const activeExerciseStatsList = computed(() => exerciseStatsList.value);
+
+                const filteredExerciseStatsList = computed(() => {
+                    if (statsCategoryFilter.value === 'ALL') return exerciseStatsList.value;
+                    return exerciseStatsList.value.filter(item => item.category === statsCategoryFilter.value);
                 });
 
                 // Studio program participation stats array
@@ -1657,7 +1773,7 @@
                                     runLift += (s.val1 || 0) * (s.val2 || 0);
                                 });
                             }
-                            if (ex.unitType === 'distance_time' && ex.sets) {
+                            if ((ex.unitType === 'distance_time' || ex.unitType === 'distance_only') && ex.sets) {
                                 ex.sets.forEach(s => {
                                     runDist += (s.val1 || 0);
                                 });
@@ -1914,6 +2030,8 @@
                     switch (unitType) {
                         case 'distance_time':
                             return `<span class="text-emerald-400 font-bold">${v1}</span><span class="text-slate-400 text-[10px]">km</span> <span class="text-slate-500">/</span> <span class="text-sky-400 font-bold">${v2}</span><span class="text-slate-400 text-[10px]">分</span>`;
+                        case 'distance_only':
+                            return `<span class="text-emerald-400 font-bold">${v1}</span><span class="text-slate-400 text-[10px]">km</span>`;
                         case 'swim':
                             return `<span class="text-cyan-400 font-bold">${v1}</span><span class="text-slate-400 text-[10px]">往復/本</span> <span class="text-slate-500">/</span> <span class="text-sky-400 font-bold">${v2}</span><span class="text-slate-400 text-[10px]">分</span>`;
                         case 'time':
@@ -1932,6 +2050,10 @@
                             const totalKm = ex.sets.reduce((acc, cur) => acc + (cur.val1 || 0), 0);
                             const totalMin = ex.sets.reduce((acc, cur) => acc + (cur.val2 || 0), 0);
                             return `${totalKm.toFixed(1)}km / 計${totalMin}分 (${count}セット)`;
+                        }
+                        case 'distance_only': {
+                            const totalKm = ex.sets.reduce((acc, cur) => acc + (cur.val1 || 0), 0);
+                            return `計 ${totalKm.toFixed(1)}km (${count}セット)`;
                         }
                         case 'swim': {
                             const totalLaps = ex.sets.reduce((acc, cur) => acc + (cur.val1 || 0), 0);
@@ -1976,6 +2098,8 @@
                         const s0 = prevSets[0];
                         if (unitType === 'distance_time') {
                             previousRecordSummary.value = `${s0.val1}km × ${s0.val2}分 (${prevSets.length}セット)`;
+                        } else if (unitType === 'distance_only') {
+                            previousRecordSummary.value = `${s0.val1}km (${prevSets.length}セット)`;
                         } else if (unitType === 'swim') {
                             previousRecordSummary.value = `${s0.val1}往復 × ${s0.val2}分 (${prevSets.length}セット)`;
                         } else if (unitType === 'time') {
@@ -1994,10 +2118,10 @@
                     } else {
                         hasPreviousRecord.value = false;
                         previousRecordSummary.value = '';
-                        const defaultV1 = masterEx ? (masterEx.defaultVal1 ?? 20) : 20;
+                        const defaultV1 = masterEx ? (masterEx.defaultVal1 ?? (unitType === 'distance_only' ? 3.0 : 20)) : (unitType === 'distance_only' ? 3.0 : 20);
                         const defaultV2 = masterEx ? (masterEx.defaultVal2 ?? 10) : 10;
 
-                        const initialSetCount = (unitType === 'time' || unitType === 'distance_time' || unitType === 'swim') ? 1 : 3;
+                        const initialSetCount = (unitType === 'time' || unitType === 'distance_time' || unitType === 'distance_only' || unitType === 'swim') ? 1 : 3;
                         const initialSets = [];
                         for (let i = 0; i < initialSetCount; i++) {
                             initialSets.push({ val1: defaultV1, val2: defaultV2 });
@@ -2085,7 +2209,7 @@
                             category: selectedCategory.value,
                             unitType: customExerciseUnitType.value,
                             settingsNote: '',
-                            defaultVal1: customExerciseUnitType.value === 'distance_time' ? 3.0 : (customExerciseUnitType.value === 'swim' ? 10 : 20),
+                            defaultVal1: (customExerciseUnitType.value === 'distance_time' || customExerciseUnitType.value === 'distance_only') ? 3.0 : (customExerciseUnitType.value === 'swim' ? 10 : 20),
                             defaultVal2: customExerciseUnitType.value === 'distance_time' ? 20 : (customExerciseUnitType.value === 'swim' ? 30 : 10)
                         };
                         exerciseMaster.value.push(newMaster);
@@ -2418,6 +2542,7 @@
                     customExerciseUnitType,
                     isEditingMachineNote,
                     machineCategoryFilter,
+                    statsCategoryFilter,
                     trophyFilterMode,
                     categories,
                     exerciseMaster,
@@ -2432,6 +2557,8 @@
                     totalWorkoutDays,
                     totalLiftedWeight,
                     totalCardioDistance,
+                    activeExerciseStatsList,
+                    filteredExerciseStatsList,
                     studioProgramStatsList,
                     selectedStudioProgramInfo,
                     showCopyModal,
